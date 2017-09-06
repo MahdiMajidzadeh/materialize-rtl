@@ -1,5 +1,12 @@
-![alt tag](https://raw.github.com/dogfalo/materialize/master/images/materialize.gif)
-===========
+<p align="center">
+  <a href="http://materializecss.com/">
+    <img src="http://materializecss.com/res/materialize.svg" width="150">
+  </a>
+
+  <h3 align="center">MaterializeCSS</h3>
+</p>
+
+## Notice: as ver 1.0 published this repo will be update, too.
 
 Materialize, a CSS Framework based on material design
 
