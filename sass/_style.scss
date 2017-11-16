@@ -59,7 +59,7 @@ td, th {
 }
 
 header, main, footer {
-  padding-left: 300px;
+  padding-right: 300px;
 }
 .parallax-demo header,
 .parallax-demo main,
@@ -99,7 +99,7 @@ ul.sidenav.sidenav-fixed li.logo {
 ul.sidenav.sidenav-fixed {
   overflow: hidden;
   box-shadow: none;
-  border-right: 1px solid $border-color;
+  border-left: 1px solid $border-color;
   padding-bottom: 104px;
 
   li {
@@ -1054,7 +1054,7 @@ body.parallax-demo footer {
     i.material-icons {
       position: absolute;
       top: 21px;
-      right: 10px;
+      left: 10px;
       cursor: pointer;
     }
   }

@@ -1,0 +1,86 @@
+@mixin grid-classes-rtl($size, $i, $perc) {
+  &.offset-#{$size}#{$i} {
+    margin-right: $perc;
+    margin-left: inherit;
+  }
+  &.pull-#{$size}#{$i} {
+    right: $perc;
+  }
+  &.push-#{$size}#{$i} {
+    left: $perc;
+  }
+}
+
+
+.rtl{
+  direction: rtl;
+  text-align: right;
+
+  .row {
+
+    .col {
+      float: right;
+
+      $i: 1;
+      @while $i <= $num-cols {
+        $perc: unquote((100 / ($num-cols / $i)) + "%");
+        @include grid-classes-rtl("s", $i, $perc);
+        $i: $i + 1;
+      }
+
+      @media #{$medium-and-up} {
+
+        $i: 1;
+        @while $i <= $num-cols {
+          $perc: unquote((100 / ($num-cols / $i)) + "%");
+          @include grid-classes-rtl("m", $i, $perc);
+          $i: $i + 1;
+        }
+      }
+
+      @media #{$large-and-up} {
+
+        $i: 1;
+        @while $i <= $num-cols {
+          $perc: unquote((100 / ($num-cols / $i)) + "%");
+          @include grid-classes-rtl("l", $i, $perc);
+          $i: $i + 1;
+        }
+      }
+
+      @media #{$extra-large-and-up} {
+
+        $i: 1;
+        @while $i <= $num-cols {
+          $perc: unquote((100 / ($num-cols / $i)) + "%");
+          @include grid-classes-rtl("xl", $i, $perc);
+          $i: $i + 1;
+        }
+      }
+    }
+  }
+
+  ul:not(.brower-degault){
+    padding-right: 0;
+  }
+
+  span.badge {
+    float: left;
+    margin-right: 14px;
+    margin-left: inherit;
+  }
+
+  .sidenav {
+    li > a {
+      & > i,
+      & > [class^="mdi-"], li > a > [class*="mdi-"],
+      & > i.material-icons {
+        float: right;
+      }
+    }
+  }
+
+  ul.sidenav.sidenav-fixed ul.collapsible-accordion .collapsible-body li a{
+      padding:  0 45px 0 37.5px;
+  }
+}

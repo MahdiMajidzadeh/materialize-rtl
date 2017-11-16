@@ -36,6 +36,7 @@ module.exports = function(grunt) {
         },
         files: {
           'dist/css/materialize.css': 'sass/materialize.scss',
+          'dist/css/materialize-rtl.css': 'sass/materialize-rtl.scss',
         }
       },
 
@@ -46,6 +47,7 @@ module.exports = function(grunt) {
         },
         files: {
           'dist/css/materialize.min.css': 'sass/materialize.scss',
+          'dist/css/materialize-rtl.min.css': 'sass/materialize-rtl.scss',
         }
       },
 
@@ -68,6 +70,7 @@ module.exports = function(grunt) {
         },
         files: {
           'bin/materialize.css': 'sass/materialize.scss',
+          'bin/materialize-rtl.css': 'sass/materialize-rtl.scss',
         }
       }
     },
