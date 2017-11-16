@@ -1,7 +1,6 @@
 @charset "UTF-8";
 
 // Mixins
-// @import "components/prefixer";
 @import "components/mixins";
 @import "components/color";
 
@@ -13,11 +12,12 @@
 
 // components
 @import "components/global";
+@import "components/badges";
 @import "components/icons-material-design";
 @import "components/grid";
 @import "components/navbar";
-@import "components/roboto";
 @import "components/typography";
+@import "components/transitions";
 @import "components/cards";
 @import "components/toast";
 @import "components/tabs";
@@ -31,11 +31,11 @@
 @import "components/materialbox";
 @import "components/forms/forms";
 @import "components/table_of_contents";
-@import "components/sideNav";
+@import "components/sidenav";
 @import "components/preloader";
 @import "components/slider";
 @import "components/carousel";
-@import "components/rtl";
-// @import "components/date_picker/default";
-// @import "components/date_picker/default.date";
-// @import "components/date_picker/default.time";
+@import "components/tapTarget";
+@import "components/pulse";
+@import "components/datepicker";
+@import "components/timepicker";
