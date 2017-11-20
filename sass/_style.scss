@@ -67,12 +67,12 @@ header, main, footer {
   padding-left: 0;
 }
 footer.example {
-  padding-left: 0;
+  padding-right: 0;
 }
 
 @media #{$medium-and-down} {
   header, main, footer {
-    padding-left: 0;
+    padding-right: 0;
   }
   h5 > span {
     display: block;

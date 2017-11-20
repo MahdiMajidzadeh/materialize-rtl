@@ -107,6 +107,40 @@
     left: 24px;
   }
 
+  .secondary-content {
+    float: left;
+  }
+
+  .collection .collection-item.avatar {
+    padding-left: inherit;
+    padding-right: 72px;
+  }
+
+  .collection .collection-item.avatar:not(.circle-clipper)>.circle, 
+  .collection .collection-item.avatar :not(.circle-clipper)>.circle {
+    left: inherit;
+    right: 15px;
+  }
+
+  .collection .collection-item.avatar .secondary-content {
+    right: inherit;
+    left: 16px;
+  }
+
+
+  nav .brand-logo.left {
+    left: 0.5rem;
+    padding: 0;
+  }
+
+  nav ul li {
+    float: right;
+  }
+
+  .preloader-wrapper {
+    direction: ltr;
+  }
+
   .breadcrumb:before {
     content: '\E5CB';
   }
