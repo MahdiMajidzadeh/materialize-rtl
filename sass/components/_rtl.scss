@@ -141,6 +141,27 @@
     direction: ltr;
   }
 
+  .collapsible-header i {
+    margin-right: inherit;
+    margin-left: 1rem;
+  }
+
+  .dropdown-content li {
+    text-align: right;
+  }
+
+  .modal .modal-footer {
+    text-align: left;
+  }
+
+  @media only screen and (min-width: 993px)
+  {
+    #toast-container {
+      right: inherit;
+      left: 7%
+    }
+  }
+
   .breadcrumb:before {
     content: '\E5CB';
   }
