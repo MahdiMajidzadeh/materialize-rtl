@@ -39,9 +39,9 @@ temp/
 _SpecRunner.html
 
 # Ignore .html files in root
-#/*.html
+# /*.html
 !fab-toolbar-demo.html
 
 # Ignore compiled files
-#css/ghpages-materialize.css
-bin/
+# css/ghpages-materialize.css
+# bin/

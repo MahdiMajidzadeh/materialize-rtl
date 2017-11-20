@@ -87,7 +87,7 @@
     // Github Latest Commit
     if ($('.github-commit').length) { // Checks if widget div exists (Index only)
       $.ajax({
-        url: "https://api.github.com/repos/dogfalo/materialize/commits/v1-dev",
+        url: "https://github.com/MahdiMajidzadeh/materialize-rtl/commits/",
         dataType: "json",
         success: function (data) {
           var sha = data.sha,
