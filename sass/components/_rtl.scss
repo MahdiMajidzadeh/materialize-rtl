@@ -81,6 +81,33 @@
   }
 
   ul.sidenav.sidenav-fixed ul.collapsible-accordion .collapsible-body li a{
-      padding:  0 45px 0 37.5px;
+    padding:  0 45px 0 37.5px;
+  }
+
+  .collapsible span.badge {
+    margin-right: auto;
+  }
+
+  .breadcrumb {
+    float: right;
+  }
+
+  .card .card-image .card-title {
+    left: inherit;
+    right: 0;
+  }
+
+  .card .card-action a:not(.btn):not(.btn-large):not(.btn-large):not(.btn-floating) {
+    margin-right: 0px;
+    margin-left: 24px;
+  }
+
+  .btn-floating.halfway-fab {
+    right: inherit;
+    left: 24px;
+  }
+
+  .breadcrumb:before {
+    content: '\E5CB';
   }
 }
