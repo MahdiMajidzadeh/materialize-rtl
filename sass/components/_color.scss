@@ -359,7 +359,7 @@ $colors: (
   "blue-grey": $blue-grey,
   "grey": $grey,
   "shades": $shades
-);
+) !default;
 
 
 // Color Classes
@@ -374,7 +374,7 @@ $colors: (
         color: $color_value !important;
       }
     }
-    @else {
+    @else if $color_name != "shades" {
       .#{$color_name}.#{$color_type} {
         background-color: $color_value !important;
       }
@@ -406,7 +406,7 @@ $colors: (
       @return map-get($curr_color, $type);
     }
   }
-  @warn "Unknown `#{name}` in $colors.";
+  @warn "Unknown `#{$color}` - `#{$type}` in $colors.";
   @return null;
 }
 

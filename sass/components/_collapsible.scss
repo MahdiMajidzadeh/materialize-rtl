@@ -7,20 +7,18 @@
 }
 
 .collapsible-header {
-  display: block;
+  display: flex;
   cursor: pointer;
-  min-height: $collapsible-height;
-  line-height: $collapsible-height;
-  padding: 0 1rem;
+  -webkit-tap-highlight-color: transparent;
+  line-height: 1.5;
+  padding: 1rem;
   background-color: $collapsible-header-color;
   border-bottom: 1px solid $collapsible-border-color;
 
   i {
     width: 2rem;
     font-size: 1.6rem;
-    line-height: $collapsible-height;
-    display: block;
-    float: left;
+    display: inline-block;
     text-align: center;
     margin-right: 1rem;
   }
@@ -30,16 +28,12 @@
   display: none;
   border-bottom: 1px solid $collapsible-border-color;
   box-sizing: border-box;
-
-  p {
-    margin: 0;
-    padding: 2rem;
-  }
+  padding: 2rem;
 }
 
-// sideNav collapsible styling
-.side-nav,
-.side-nav.fixed {
+// Sidenav collapsible styling
+.sidenav,
+.sidenav.fixed {
 
   .collapsible {
     border: none;
@@ -53,7 +47,7 @@
     border: none;
     line-height: inherit;
     height: inherit;
-    padding: 0 $sidenav-padding-right;
+    padding: 0 $sidenav-padding;
 
     &:hover { background-color: rgba(0,0,0,.05); }
     i { line-height: inherit; }
@@ -64,8 +58,8 @@
     background-color: $collapsible-header-color;
 
     li a {
-      padding: 0 (7.5px + $sidenav-padding-right)
-               0 (15px + $sidenav-padding-right);
+      padding: 0 (7.5px + $sidenav-padding)
+               0 (15px + $sidenav-padding);
     }
   }
 

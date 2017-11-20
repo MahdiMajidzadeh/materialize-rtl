@@ -1,12 +1,168 @@
-body{
-	direction:rtl;
+@mixin grid-classes-rtl($size, $i, $perc) {
+  &.offset-#{$size}#{$i} {
+    margin-right: $perc;
+    margin-left: inherit;
+  }
+  &.pull-#{$size}#{$i} {
+    right: $perc;
+  }
+  &.push-#{$size}#{$i} {
+    left: $perc;
+  }
 }
 
-.side-nav{
-    text-align: right;
-}
 
-.input-field label {
+.rtl{
+  direction: rtl;
+  text-align: right;
+
+  .row {
+
+    .col {
+      float: right;
+
+      $i: 1;
+      @while $i <= $num-cols {
+        $perc: unquote((100 / ($num-cols / $i)) + "%");
+        @include grid-classes-rtl("s", $i, $perc);
+        $i: $i + 1;
+      }
+
+      @media #{$medium-and-up} {
+
+        $i: 1;
+        @while $i <= $num-cols {
+          $perc: unquote((100 / ($num-cols / $i)) + "%");
+          @include grid-classes-rtl("m", $i, $perc);
+          $i: $i + 1;
+        }
+      }
+
+      @media #{$large-and-up} {
+
+        $i: 1;
+        @while $i <= $num-cols {
+          $perc: unquote((100 / ($num-cols / $i)) + "%");
+          @include grid-classes-rtl("l", $i, $perc);
+          $i: $i + 1;
+        }
+      }
+
+      @media #{$extra-large-and-up} {
+
+        $i: 1;
+        @while $i <= $num-cols {
+          $perc: unquote((100 / ($num-cols / $i)) + "%");
+          @include grid-classes-rtl("xl", $i, $perc);
+          $i: $i + 1;
+        }
+      }
+    }
+  }
+
+  ul:not(.brower-degault){
+    padding-right: 0;
+  }
+
+  span.badge {
+    float: left;
+    margin-right: 14px;
+    margin-left: inherit;
+  }
+
+  .sidenav {
+    li > a {
+      & > i,
+      & > [class^="mdi-"], li > a > [class*="mdi-"],
+      & > i.material-icons {
+        float: right;
+      }
+    }
+  }
+
+  ul.sidenav.sidenav-fixed ul.collapsible-accordion .collapsible-body li a{
+    padding:  0 45px 0 37.5px;
+  }
+
+  .collapsible span.badge {
+    margin-right: auto;
+  }
+
+  .breadcrumb {
+    float: right;
+  }
+
+  .card .card-image .card-title {
     left: inherit;
-    right: 0.5rem;
+    right: 0;
+  }
+
+  .card .card-action a:not(.btn):not(.btn-large):not(.btn-large):not(.btn-floating) {
+    margin-right: 0px;
+    margin-left: 24px;
+  }
+
+  .btn-floating.halfway-fab {
+    right: inherit;
+    left: 24px;
+  }
+
+  .secondary-content {
+    float: left;
+  }
+
+  .collection .collection-item.avatar {
+    padding-left: inherit;
+    padding-right: 72px;
+  }
+
+  .collection .collection-item.avatar:not(.circle-clipper)>.circle, 
+  .collection .collection-item.avatar :not(.circle-clipper)>.circle {
+    left: inherit;
+    right: 15px;
+  }
+
+  .collection .collection-item.avatar .secondary-content {
+    right: inherit;
+    left: 16px;
+  }
+
+
+  nav .brand-logo.left {
+    left: 0.5rem;
+    padding: 0;
+  }
+
+  nav ul li {
+    float: right;
+  }
+
+  .preloader-wrapper {
+    direction: ltr;
+  }
+
+  .collapsible-header i {
+    margin-right: inherit;
+    margin-left: 1rem;
+  }
+
+  .dropdown-content li {
+    text-align: right;
+  }
+
+  .modal .modal-footer {
+    text-align: left;
+  }
+
+  @media only screen and (min-width: 993px)
+  {
+    #toast-container {
+      right: inherit;
+      left: 7%
+    }
+  }
+
+  .breadcrumb:before {
+    content: '\E5CB';
+  }
 }
