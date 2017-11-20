@@ -9204,6 +9204,67 @@ input[type=range]:focus:not(.active)::-ms-thumb {
   }
 }
 
+.rtl .input-field .prefix ~ input, .rtl .input-field .prefix ~ textarea, .rtl .input-field .prefix ~ label, .rtl .input-field .prefix ~ .validate ~ label, .rtl .input-field .prefix ~ .autocomplete-content {
+  margin-left: inherit;
+  margin-right: 3rem;
+}
+
+.rtl .input-field > label:not(.label-icon).active,
+.rtl .input-field > label:not(.label-icon) {
+  -webkit-transform-origin: top right;
+  transform-origin: top right;
+}
+
+.rtl form p {
+  text-align: right;
+}
+
+.rtl [type="checkbox"] + span:not(.lever),
+.rtl [type="radio"]:not(:checked) + span, .rtl [type="radio"]:checked + span {
+  padding-left: inherit;
+  padding-right: 35px;
+}
+
+.rtl [type="checkbox"] + span:not(.lever):before,
+.rtl [type="checkbox"]:not(.filled-in) + span:not(.lever):after,
+.rtl [type="checkbox"].filled-in + span:not(.lever):before,
+.rtl [type="checkbox"].filled-in + span:not(.lever):after,
+.rtl [type="radio"] + span:before, .rtl [type="radio"] + span:after {
+  left: inherit;
+  right: 0;
+}
+
+.rtl [type="checkbox"]:checked + span:not(.lever):before {
+  left: inherit;
+  right: 10px;
+}
+
+.rtl [type="checkbox"]:indeterminate + span:not(.lever):before {
+  left: inherit;
+  right: 20px;
+}
+
+.rtl .input-field.col label {
+  left: inherit;
+  right: .75rem;
+}
+
+.rtl .select-wrapper .caret {
+  right: inherit;
+  left: 0;
+}
+
+.rtl .chip .close {
+  float: left;
+  padding-right: 8px;
+  padding-left: 0;
+}
+
+.rtl .chip > img {
+  float: right;
+  margin: 0 -12px 0 8px;
+}
+
 .rtl .breadcrumb:before {
   content: '\E5CB';
 }

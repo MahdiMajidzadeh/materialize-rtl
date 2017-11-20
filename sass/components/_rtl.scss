@@ -162,6 +162,67 @@
     }
   }
 
+  .input-field .prefix ~ input, .input-field .prefix ~ textarea, .input-field .prefix ~ label, .input-field .prefix ~ .validate ~ label, .input-field .prefix ~ .autocomplete-content {
+    margin-left: inherit;
+    margin-right: 3rem;
+  }
+
+  .input-field>label:not(.label-icon).active,
+  .input-field>label:not(.label-icon){
+    -webkit-transform-origin: top right;
+    transform-origin: top right;
+  }
+
+  form p {
+    text-align: right;
+  }
+
+  [type="checkbox"]+span:not(.lever),
+  [type="radio"]:not(:checked)+span, [type="radio"]:checked+span {
+    padding-left: inherit;
+    padding-right: 35px;
+  }
+
+  [type="checkbox"]+span:not(.lever):before, 
+  [type="checkbox"]:not(.filled-in)+span:not(.lever):after,
+  [type="checkbox"].filled-in+span:not(.lever):before, 
+  [type="checkbox"].filled-in+span:not(.lever):after,
+  [type="radio"]+span:before, [type="radio"]+span:after {
+    left: inherit;
+    right: 0;
+  }
+
+  [type="checkbox"]:checked+span:not(.lever):before{
+    left: inherit;
+    right: 10px;
+  }
+
+  [type="checkbox"]:indeterminate+span:not(.lever):before{
+    left: inherit;
+    right: 20px;
+  }
+
+  .input-field.col label {
+    left: inherit;
+    right: .75rem;
+  }
+
+  .select-wrapper .caret {
+    right: inherit;
+    left: 0
+  }
+
+  .chip .close {
+    float: left;
+    padding-right: 8px;
+    padding-left: 0;
+  }
+
+  .chip>img {
+    float: right;
+    margin: 0 -12px 0 8px;
+  }
+
   .breadcrumb:before {
     content: '\E5CB';
   }
