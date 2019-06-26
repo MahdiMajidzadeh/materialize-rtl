@@ -1,7 +1,7 @@
 {
   "name": "materialize-css",
   "description": "Builds Materialize distribution packages",
-  "author": "Alvin Wang, Alan Chang",
+  "author": "Mahdi Majidzadeh",
   "homepage": "http://materializecss.com/",
   "version": "1.0.0-alpha.1",
   "main": "dist/js/materialize.js",
@@ -10,10 +10,10 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "git://github.com/Dogfalo/materialize.git"
+    "url": "git://github.com/MahdiMajidzadeh/materialize-rtl.git"
   },
   "bugs": {
-    "url": "https://github.com/Dogfalo/materialize/issues"
+    "url": "https://github.com/MahdiMajidzadeh/materialize-rtl/issues"
   },
   "scripts": {
     "dev": "grunt monitor",
