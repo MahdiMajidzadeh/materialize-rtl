@@ -9215,6 +9215,11 @@ input[type=range]:focus:not(.active)::-ms-thumb {
   transform-origin: top right;
 }
 
+.rtl .input-field .helper-text::after {
+  left: inherit;
+  right: 0;
+}
+
 .rtl form p {
   text-align: right;
 }

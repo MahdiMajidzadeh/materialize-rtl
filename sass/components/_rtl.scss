@@ -172,6 +172,11 @@
     -webkit-transform-origin: top right;
     transform-origin: top right;
   }
+  
+  .input-field .helper-text::after {
+	left: inherit;
+	right: 0;
+  }
 
   form p {
     text-align: right;
