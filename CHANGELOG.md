@@ -2,7 +2,199 @@ Changelog
 =======
 Bolded styling surrounded by emojis indicates a breaking change.
 
-## v1.0.0 (November 10th)
+## 1.0.0 (September 9th, 2018)
+- [Full Changelog here](https://github.com/Dogfalo/materialize/blob/v1-dev/v1-changelog.md)
+
+## 1.0.0-rc.2 (June 23rd, 2018)
+- Autocomplete
+  - Fixed bug where Autocomplete did not open properly in certain cases with keyboard focus
+
+- Carousel
+  - Fix noWrap option bug
+
+- Collapsible
+  - Now correctly removes all event listeners on destroy
+
+- Materialbox
+  - Destroy now removed wrapper element added during intialization
+
+- Pushpin
+  - Fixed bug on IE11 where class was not removed properly
+
+- Select
+  - No longer triggers onchange event when selecting the same option
+
+- Sidenav
+  - Destroy now reenables body scrolling if Sidenav was destroyed while it was open
+
+- Tabs
+  - Tab indicator no longer displays improperly when a scrollbar is present in the element
+
+
+## 1.0.0-rc.1 (May 1st, 2018)
+- Autocomplete
+  - Added open and close methods
+  - Fixed bug where Autocomplete would close on click
+
+- Datepicker
+  - Added autoClose option
+
+- Modal
+  - Fixed issue with focus with nested modals
+
+- Select
+  - Removed `active` class on option elements
+  - Fixed bug where `selected` class was not properly removed on option elements
+
+- Sidenav
+  - Destroy method now correctly removes style property
+
+- Text Input
+  - Fixed bug where autofill on chrome overlapped text input
+
+- Toast
+  - Fixed bug where Toast did not respect inDuration option
+
+- Tooltip
+  - Fixed tooltip positioning bug in certain scenarios when html height was less than screen height
+  - Fixed bug where tooltip stayed open on click
+
+
+## 1.0.0-beta (March 21st, 2018)
+- Autocomplete
+  - Now uses dropdown
+
+- Carousel
+  - Added numVisible option
+
+- Collapsible
+  - Added keyboard support
+
+- Dropdown
+  - Fixed scrolling dropdown bug on touch devices
+
+- Javascript Initialization
+  - Added AutoInit function
+
+- Modals
+  - Focus now stays within open modal
+
+- Pickers
+  - Standardized action buttons to match those on android
+  - Added support for date and time input types
+  - **fromnow renamed to fromNow**
+
+- Select
+  - Dropdown scrolls to selected option
+
+- Sidenav
+  - Now detects vertical scrolling
+
+- Tabs
+  - Fixed tab preselection on swipeable tabs
+
+- TapTarget
+  - **Reverted name change from FeatureDiscovery**
+
+- Tooltips
+  - Added keyboard support
+
+
+## 1.0.0-alpha.4 (February 18th, 2018)
+- Badge
+  - Fixed display issue when used in a table
+
+- Chips
+  - Fixed autocomplete initialization
+
+- CSS
+  - Added hide and show classes for extra large breakpoint
+  - Added small buttons
+  - Fixed input helper text alignment when using prefix
+
+- Date Picker
+  - Fixed month and year select overflow issues
+  - Added additional date formatting options
+
+- Dropdown
+  - Added container option
+  - Dropdown on mobile now correctly selects the right item
+  - Dropdown now closes correctly on iOS devices
+
+- Materialbox
+  - Fixed error with photo caption
+  - Fixed issues caused by width and height attributes
+  - Fixed issues caused by max-width and max-height
+
+- Modal
+  - Improved support for nested modals
+
+- Parallax
+  - Fixed infinite loop bug
+
+- Select
+  - *Renamed plugin class to `FormSelect`*
+  - *Renamed jQuery plugin to `formSelect`*
+
+- Sidenav
+  - Fixed issues with draggable option when used with fixed sidenav
+
+- Time Picker
+  - Changed i18n options to be more consistent with date picker
+  - Fixed error with auto close option
+
+
+## 1.0.0-alpha.3 (December 29th, 2017)
+- *Initialization code for all components changed. E.g. Change`new M.Tooltip(el, options)` to `M.Tooltip.init(el, options)`*
+  - This was done so that the same initialization code can be used to initialize single Elements as well as NodeLists and jQuery element objects
+
+- Added in onOpen and OnClose callbacks for appropriate plugins
+
+- Datepicker
+  - Destroy function added
+
+- Feature Discovery
+  - Added open and close callbacks
+
+- Materialbox
+  - Added open and close callbacks
+
+- Modal
+  - Added open and close callbacks for consistency
+  - Removed ready and complete callbacks
+
+- Parallax
+  - Has responsiveThreshold option
+  - Destroy function added
+
+- Pushpin
+  - added onPositionChange callback
+
+## 1.0.0-alpha.2 (November 30th)
+- Chips
+  - Fixed and standardized chips callback parameters
+
+- Datepicker
+  - Fixed date format option
+  - Scrollbar no longer unecessarily appears when using datepicker
+  - Fixed bug where using month and year selectors didn't change date
+
+- Dropdown
+  - Removed automatic focus highlight on open
+
+- Textarea
+  - Fixed error where text was cut off on Firefox
+
+- Tabs
+  - Fixed error with pure JavaScript initialization
+  - Fixed error where a tab with no content would break tabs
+
+- Timepicker
+  - Fixed error with twelveHour options
+
+- Replaced velocity.js with anime.js
+
+## 1.0.0-alpha.1 (November 10th)
 - Dropdown
   - rewritten with classes
   - Plugin is initialized on `.dropdown-content` instead of `.dropdown-button`
@@ -16,6 +208,7 @@ Bolded styling surrounded by emojis indicates a breaking change.
 - Select
   - rewritten with classes
   - Plugin renamed from 'material_select' to 'select'
+  - The select will no longer copy the class attribute on each <option> el to the <img> for the icon in the generated select.
 
 - Tabs
   - rewritten with classes

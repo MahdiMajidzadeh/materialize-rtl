@@ -3,6 +3,8 @@
 .cache
 .DS_Store
 .idea
+.vs
+.vscode
 .project
 .projectile
 .settings
@@ -19,8 +21,6 @@ logs
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
-yarn.lock
-package-lock.json
 
 # grunt-contrib-sass cache
 .sass-cache/
@@ -39,9 +39,12 @@ temp/
 _SpecRunner.html
 
 # Ignore .html files in root
-# /*.html
+/*.html
 !fab-toolbar-demo.html
 
 # Ignore compiled files
-# css/ghpages-materialize.css
-# bin/
+css/ghpages-materialize.css
+bin/
+
+# Ignore lock
+yarn.lock
