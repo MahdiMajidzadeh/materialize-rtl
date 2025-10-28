@@ -4,15 +4,15 @@
   let _defaults = {
     top: 0,
     bottom: Infinity,
-    offset: 0
+    offset: 0,
+    onPositionChange: null
   };
-
 
   /**
    * @class
    *
    */
-  class Pushpin {
+  class Pushpin extends Component {
     /**
      * Construct Pushpin instance
      * @constructor
@@ -20,14 +20,8 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Pushpin, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Pushpin) {
-        el.M_Pushpin.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Pushpin = this;
 
       /**
@@ -46,12 +40,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Pushpin(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -68,11 +58,14 @@
     destroy() {
       this.el.style.top = null;
       this._removePinClasses();
-      this._removeEventHandlers();
 
       // Remove pushpin Inst
       let index = Pushpin._pushpins.indexOf(this);
       Pushpin._pushpins.splice(index, 1);
+      if (Pushpin._pushpins.length === 0) {
+        this._removeEventHandlers();
+      }
+      this.el.M_Pushpin = undefined;
     }
 
     static _updateElements() {
@@ -93,12 +86,19 @@
     _updatePosition() {
       let scrolled = M.getDocumentScrollTop() + this.options.offset;
 
-      if (this.options.top <= scrolled && this.options.bottom >= scrolled &&
-          !this.el.classList.contains('pinned')) {
+      if (
+        this.options.top <= scrolled &&
+        this.options.bottom >= scrolled &&
+        !this.el.classList.contains('pinned')
+      ) {
         this._removePinClasses();
-
         this.el.style.top = `${this.options.offset}px`;
         this.el.classList.add('pinned');
+
+        // onPositionChange callback
+        if (typeof this.options.onPositionChange === 'function') {
+          this.options.onPositionChange.call(this, 'pinned');
+        }
       }
 
       // Add pin-top (when scrolled position is above top)
@@ -106,6 +106,11 @@
         this._removePinClasses();
         this.el.style.top = 0;
         this.el.classList.add('pin-top');
+
+        // onPositionChange callback
+        if (typeof this.options.onPositionChange === 'function') {
+          this.options.onPositionChange.call(this, 'pin-top');
+        }
       }
 
       // Add pin-bottom (when scrolled position is below bottom)
@@ -113,11 +118,19 @@
         this._removePinClasses();
         this.el.classList.add('pin-bottom');
         this.el.style.top = `${this.options.bottom - this.originalOffset}px`;
+
+        // onPositionChange callback
+        if (typeof this.options.onPositionChange === 'function') {
+          this.options.onPositionChange.call(this, 'pin-bottom');
+        }
       }
     }
 
     _removePinClasses() {
-      this.el.classList.remove('pin-top', 'pinned', 'pin-bottom');
+      // IE 11 bug (can't remove multiple classes in one line)
+      this.el.classList.remove('pin-top');
+      this.el.classList.remove('pinned');
+      this.el.classList.remove('pin-bottom');
     }
   }
 
@@ -132,5 +145,4 @@
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Pushpin, 'pushpin', 'M_Pushpin');
   }
-
 })(cash);

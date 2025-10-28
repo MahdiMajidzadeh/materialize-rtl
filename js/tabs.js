@@ -1,18 +1,18 @@
-(function ($, Vel) {
+(function($, anim) {
   'use strict';
 
   let _defaults = {
     duration: 300,
     onShow: null,
     swipeable: false,
-    responsiveThreshold: Infinity, // breakpoint for swipeable
+    responsiveThreshold: Infinity // breakpoint for swipeable
   };
 
   /**
    * @class
    *
    */
-  class Tabs {
+  class Tabs extends Component {
     /**
      * Construct Tabs instance
      * @constructor
@@ -20,21 +20,12 @@
      * @param {Object} options
      */
     constructor(el, options) {
-      // If exists, destroy and reinitialize
-      if (!!el.M_Tabs) {
-        el.M_Tabs.destroy();
-      }
+      super(Tabs, el, options);
+
+      this.el.M_Tabs = this;
 
       /**
-       * The jQuery element
-       * @type {jQuery}
-       */
-      this.$el = $(el);
-
-      this.el = el;
-
-      /**
-       * Options for the carousel
+       * Options for the Tabs
        * @member Tabs#options
        * @prop {Number} duration
        * @prop {Function} onShow
@@ -43,22 +34,21 @@
        */
       this.options = $.extend({}, Tabs.defaults, options);
 
-      this.el.M_Tabs = this;
-
       // Setup
       this.$tabLinks = this.$el.children('li.tab').children('a');
       this.index = 0;
-      this._setTabsAndTabWidth();
       this._setupActiveTabLink();
-      this._createIndicator();
 
+      // Setup tabs content
       if (this.options.swipeable) {
         this._setupSwipeableTabs();
-
       } else {
         this._setupNormalTabs();
       }
 
+      // Setup tabs indicator after content to ensure accurate widths
+      this._setTabsAndTabWidth();
+      this._createIndicator();
 
       this._setupEventHandlers();
     }
@@ -67,12 +57,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Tabs(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -149,11 +135,9 @@
       }
 
       // Act as regular link if target attribute is specified.
-      if (!!tabLink.attr("target")) {
+      if (!!tabLink.attr('target')) {
         return;
       }
-
-      this._setTabsAndTabWidth();
 
       // Make the old tab inactive.
       this.$activeTabLink.removeClass('active');
@@ -173,26 +157,28 @@
       if (this.options.swipeable) {
         if (this._tabsCarousel) {
           this._tabsCarousel.set(this.index, () => {
-            if (typeof(this.options.onShow) === "function") {
+            if (typeof this.options.onShow === 'function') {
               this.options.onShow.call(this, this.$content[0]);
             }
           });
         }
       } else {
-        if (this.$content !== undefined) {
+        if (this.$content.length) {
           this.$content[0].style.display = 'block';
           this.$content.addClass('active');
-          if (typeof(this.options.onShow) === 'function') {
+          if (typeof this.options.onShow === 'function') {
             this.options.onShow.call(this, this.$content[0]);
           }
 
-          if ($oldContent !== undefined &&
-              !$oldContent.is(this.$content)) {
+          if ($oldContent.length && !$oldContent.is(this.$content)) {
             $oldContent[0].style.display = 'none';
             $oldContent.removeClass('active');
           }
         }
       }
+
+      // Update widths after content is swapped (scrollbar bugfix)
+      this._setTabsAndTabWidth();
 
       // Update indicator
       this._animateIndicator(prevIndex);
@@ -200,7 +186,6 @@
       // Prevent the anchor's default click action
       e.preventDefault();
     }
-
 
     /**
      * Generate elements for tab indicator.
@@ -223,14 +208,20 @@
      */
     _setupActiveTabLink() {
       // If the location.hash matches one of the links, use that as the active tab.
-      this.$activeTabLink = $(this.$tabLinks.filter('[href="'+location.hash+'"]'));
+      this.$activeTabLink = $(this.$tabLinks.filter('[href="' + location.hash + '"]'));
 
       // If no match is found, use the first link or any with class 'active' as the initial active tab.
       if (this.$activeTabLink.length === 0) {
-        this.$activeTabLink = this.$el.children('li.tab').children('a.active').first();
+        this.$activeTabLink = this.$el
+          .children('li.tab')
+          .children('a.active')
+          .first();
       }
       if (this.$activeTabLink.length === 0) {
-        this.$activeTabLink = this.$el.children('li.tab').children('a').first();
+        this.$activeTabLink = this.$el
+          .children('li.tab')
+          .children('a')
+          .first();
       }
 
       this.$tabLinks.removeClass('active');
@@ -249,7 +240,7 @@
      */
     _setupSwipeableTabs() {
       // Change swipeable according to responsive threshold
-      if (window.innerWidth > options.responsiveThreshold) {
+      if (window.innerWidth > this.options.responsiveThreshold) {
         this.options.swipeable = false;
       }
 
@@ -265,7 +256,10 @@
       $tabsWrapper.append($tabsContent);
       $tabsContent[0].style.display = '';
 
-      this._tabsCarousel = new M.Carousel($tabsWrapper[0], {
+      // Keep active tab index to set initial carousel slide
+      let activeTabIndex = this.$activeTabLink.closest('.tab').index();
+
+      this._tabsCarousel = M.Carousel.init($tabsWrapper[0], {
         fullWidth: true,
         noWrap: true,
         onCycleTo: (item) => {
@@ -275,11 +269,14 @@
           this.$activeTabLink = this.$tabLinks.eq(this.index);
           this.$activeTabLink.addClass('active');
           this._animateIndicator(prevIndex);
-          if (typeof(this.options.onShow) === "function") {
-            this.options.onShow.call(this, this.$content);
+          if (typeof this.options.onShow === 'function') {
+            this.options.onShow.call(this, this.$content[0]);
           }
-        },
+        }
       });
+
+      // Set initial carousel slide to active tab
+      this._tabsCarousel.set(activeTabIndex);
     }
 
     /**
@@ -334,7 +331,7 @@
 
     /**
      * Finds right attribute for indicator based on active tab.
-     * @param {jQuery} el
+     * @param {cash} el
      */
     _calcRightPos(el) {
       return Math.ceil(this.tabsWidth - el.position().left - el[0].getBoundingClientRect().width);
@@ -342,10 +339,15 @@
 
     /**
      * Finds left attribute for indicator based on active tab.
-     * @param {jQuery} el
+     * @param {cash} el
      */
     _calcLeftPos(el) {
       return Math.floor(el.position().left);
+    }
+
+    updateTabIndicator() {
+      this._setTabsAndTabWidth();
+      this._animateIndicator(this.index);
     }
 
     /**
@@ -353,33 +355,31 @@
      * @param {Number} prevIndex
      */
     _animateIndicator(prevIndex) {
-      let velOptions = {
-        duration: this.options.duration,
-        queue: false,
-        easing: 'easeOutQuad'
-      };
-      let velOptionsLeft, velOptionsRight;
+      let leftDelay = 0,
+        rightDelay = 0;
 
-      if ((this.index - prevIndex) >= 0) {
-        velOptionsLeft = $.extend({}, velOptions, {delay: 90});
-        velOptionsRight = velOptions;
-
+      if (this.index - prevIndex >= 0) {
+        leftDelay = 90;
       } else {
-        velOptionsLeft = velOptions;
-        velOptionsRight = $.extend({}, velOptions, {delay: 90});
+        rightDelay = 90;
       }
 
-      // Animate with velocity
-      Vel(
-        this._indicator,
-        {left: this._calcLeftPos(this.$activeTabLink) },
-        velOptionsLeft
-      );
-      Vel(
-        this._indicator,
-        {right: this._calcRightPos(this.$activeTabLink) },
-        velOptionsRight
-      );
+      // Animate
+      let animOptions = {
+        targets: this._indicator,
+        left: {
+          value: this._calcLeftPos(this.$activeTabLink),
+          delay: leftDelay
+        },
+        right: {
+          value: this._calcRightPos(this.$activeTabLink),
+          delay: rightDelay
+        },
+        duration: this.options.duration,
+        easing: 'easeOutQuad'
+      };
+      anim.remove(this._indicator);
+      anim(animOptions);
     }
 
     /**
@@ -394,11 +394,9 @@
     }
   }
 
-
-  window.M.Tabs = Tabs;
+  M.Tabs = Tabs;
 
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Tabs, 'tabs', 'M_Tabs');
   }
-
-})(cash, M.Vel);
+})(cash, M.anime);

@@ -1,4 +1,4 @@
-(function ($, Vel) {
+(function($) {
   'use strict';
 
   let _defaults = {
@@ -12,7 +12,6 @@
     onChipDelete: null
   };
 
-
   /**
    * @typedef {Object} chip
    * @property {String} tag  chip tag string
@@ -23,7 +22,7 @@
    * @class
    *
    */
-  class Chips {
+  class Chips extends Component {
     /**
      * Construct Chips instance and set up overlay
      * @constructor
@@ -31,14 +30,8 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Chips, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Chips) {
-        el.M_Chips.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Chips = this;
 
       /**
@@ -54,8 +47,7 @@
       this.$el.addClass('chips input-field');
       this.chipsData = [];
       this.$chips = $();
-      this.$input = this.$el.find('input');
-      this.$input.addClass('input');
+      this._setupInput();
       this.hasAutocomplete = Object.keys(this.options.autocompleteOptions).length > 0;
 
       // Set input id
@@ -83,12 +75,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Chips(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -159,13 +147,12 @@
           // delete chip
           this.deleteChip(index);
           this.$input[0].focus();
-
         } else {
           // select chip
           this.selectChip(index);
         }
 
-      // Default handle click to focus on input
+        // Default handle click to focus on input
       } else {
         this.$input[0].focus();
       }
@@ -197,14 +184,16 @@
           let index = currChips._selectedChip.index();
           currChips.deleteChip(index);
           currChips._selectedChip = null;
-          selectIndex = index - 1;
+
+          // Make sure selectIndex doesn't go negative
+          selectIndex = Math.max(index - 1, 0);
         }
 
         if (currChips.chipsData.length) {
           currChips.selectChip(selectIndex);
         }
 
-      // left arrow key
+        // left arrow key
       } else if (e.keyCode === 37) {
         if (currChips._selectedChip) {
           let selectIndex = currChips._selectedChip.index() - 1;
@@ -214,7 +203,7 @@
           currChips.selectChip(selectIndex);
         }
 
-      // right arrow key
+        // right arrow key
       } else if (e.keyCode === 39) {
         if (currChips._selectedChip) {
           let selectIndex = currChips._selectedChip.index() + 1;
@@ -273,18 +262,22 @@
       // enter
       if (e.keyCode === 13) {
         // Override enter if autocompleting.
-        if (this.hasAutocomplete &&
-            this.autocomplete &&
-            this.autocomplete.isOpen) {
+        if (this.hasAutocomplete && this.autocomplete && this.autocomplete.isOpen) {
           return;
         }
 
         e.preventDefault();
-        this.addChip({tag: this.$input[0].value});
+        this.addChip({
+          tag: this.$input[0].value
+        });
         this.$input[0].value = '';
 
-      // delete or left
-      } else if ((e.keyCode === 8 || e.keyCode === 37) && this.$input[0].value === '' && this.chipsData.length) {
+        // delete or left
+      } else if (
+        (e.keyCode === 8 || e.keyCode === 37) &&
+        this.$input[0].value === '' &&
+        this.chipsData.length
+      ) {
         e.preventDefault();
         this.selectChip(this.chipsData.length - 1);
       }
@@ -331,7 +324,7 @@
       }
 
       // move input to end
-      this.$el.append(this.$input);
+      this.$el.append(this.$input[0]);
     }
 
     /**
@@ -339,12 +332,27 @@
      */
     _setupAutocomplete() {
       this.options.autocompleteOptions.onAutocomplete = (val) => {
-        this.addChip({tag: val});
+        this.addChip({
+          tag: val
+        });
         this.$input[0].value = '';
         this.$input[0].focus();
       };
 
-      this.autocomplete = M.Autocomplete.init(this.$input, this.options.autocompleteOptions)[0];
+      this.autocomplete = M.Autocomplete.init(this.$input[0], this.options.autocompleteOptions);
+    }
+
+    /**
+     * Setup Input
+     */
+    _setupInput() {
+      this.$input = this.$el.find('input');
+      if (!this.$input.length) {
+        this.$input = $('<input></input>');
+        this.$el.append(this.$input);
+      }
+
+      this.$input.addClass('input');
     }
 
     /**
@@ -353,7 +361,7 @@
     _setupLabel() {
       this.$label = this.$el.find('label');
       if (this.$label.length) {
-        this.$label.setAttribute('for', this.$input.attr('id'));
+        this.$label[0].setAttribute('for', this.$input.attr('id'));
       }
     }
 
@@ -361,10 +369,12 @@
      * Set placeholder
      */
     _setPlaceholder() {
-      if ((this.chipsData !== undefined && !this.chipsData.length) && this.options.placeholder) {
+      if (this.chipsData !== undefined && !this.chipsData.length && this.options.placeholder) {
         $(this.$input).prop('placeholder', this.options.placeholder);
-
-      } else if ((this.chipsData === undefined || !!this.chipsData.length) && this.options.secondaryPlaceholder) {
+      } else if (
+        (this.chipsData === undefined || !!this.chipsData.length) &&
+        this.options.secondaryPlaceholder
+      ) {
         $(this.$input).prop('placeholder', this.options.secondaryPlaceholder);
       }
     }
@@ -383,10 +393,9 @@
           }
         }
         return !exists;
-
-      } else {
-        return false;
       }
+
+      return false;
     }
 
     /**
@@ -394,8 +403,7 @@
      * @param {chip} chip
      */
     addChip(chip) {
-      if (!this._isValid(chip) ||
-          this.chipsData.length >= this.options.limit) {
+      if (!this._isValid(chip) || this.chipsData.length >= this.options.limit) {
         return;
       }
 
@@ -406,7 +414,7 @@
       this._setPlaceholder();
 
       // fire chipAdd callback
-      if (typeof(this.options.onChipAdd) === 'function') {
+      if (typeof this.options.onChipAdd === 'function') {
         this.options.onChipAdd.call(this, this.$el, renderedChip);
       }
     }
@@ -416,7 +424,7 @@
      * @param {Number} chip
      */
     deleteChip(chipIndex) {
-      // let chip = this.chips[chipIndex];
+      let $chip = this.$chips.eq(chipIndex);
       this.$chips.eq(chipIndex).remove();
       this.$chips = this.$chips.filter(function(el) {
         return $(el).index() >= 0;
@@ -425,8 +433,8 @@
       this._setPlaceholder();
 
       // fire chipDelete callback
-      if (typeof(this.options.onChipDelete) === 'function') {
-        this.options.onChipDelete.call(this, this.$el, this.$chip);
+      if (typeof this.options.onChipDelete === 'function') {
+        this.options.onChipDelete.call(this, this.$el, $chip[0]);
       }
     }
 
@@ -440,8 +448,8 @@
       $chip[0].focus();
 
       // fire chipSelect callback
-      if (typeof(this.options.onChipSelect) === 'function') {
-        this.options.onChipSelect.call(this, this.$el, this.$chip);
+      if (typeof this.options.onChipSelect === 'function') {
+        this.options.onChipSelect.call(this, this.$el, $chip[0]);
       }
     }
   }
@@ -465,7 +473,9 @@
       if ($chips.length && $chips[0].M_Chips) {
         return;
       }
-      $(this).closest('.chip').remove();
+      $(this)
+        .closest('.chip')
+        .remove();
     });
   });
-}( cash ));
+})(cash);

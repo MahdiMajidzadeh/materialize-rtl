@@ -1,4 +1,4 @@
-(function($, Vel) {
+(function($, anim) {
   'use strict';
 
   let _defaults = {
@@ -6,18 +6,17 @@
     enterDelay: 0,
     html: null,
     margin: 5,
-    inDuration: 300,
-    outDuration: 250,
+    inDuration: 250,
+    outDuration: 200,
     position: 'bottom',
     transitionMovement: 10
   };
-
 
   /**
    * @class
    *
    */
-  class Tooltip {
+  class Tooltip extends Component {
     /**
      * Construct Tooltip instance
      * @constructor
@@ -25,19 +24,14 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Tooltip, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Tooltip) {
-        el.M_Tooltip.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Tooltip = this;
       this.options = $.extend({}, Tooltip.defaults, options);
 
       this.isOpen = false;
       this.isHovered = false;
+      this.isFocused = false;
       this._appendTooltipEl();
       this._setupEventHandlers();
     }
@@ -46,12 +40,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Tooltip(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -68,7 +58,7 @@
     destroy() {
       $(this.tooltipEl).remove();
       this._removeEventHandlers();
-      this.$el[0].M_Tooltip = undefined;
+      this.el.M_Tooltip = undefined;
     }
 
     _appendTooltipEl() {
@@ -88,109 +78,117 @@
     }
 
     _setupEventHandlers() {
-      this.handleMouseEnterBound = this._handleMouseEnter.bind(this);
-      this.handleMouseLeaveBound = this._handleMouseLeave.bind(this);
-      this.$el[0].addEventListener('mouseenter', this.handleMouseEnterBound);
-      this.$el[0].addEventListener('mouseleave', this.handleMouseLeaveBound);
+      this._handleMouseEnterBound = this._handleMouseEnter.bind(this);
+      this._handleMouseLeaveBound = this._handleMouseLeave.bind(this);
+      this._handleFocusBound = this._handleFocus.bind(this);
+      this._handleBlurBound = this._handleBlur.bind(this);
+      this.el.addEventListener('mouseenter', this._handleMouseEnterBound);
+      this.el.addEventListener('mouseleave', this._handleMouseLeaveBound);
+      this.el.addEventListener('focus', this._handleFocusBound, true);
+      this.el.addEventListener('blur', this._handleBlurBound, true);
     }
 
     _removeEventHandlers() {
-      this.$el[0].removeEventListener('mouseenter', this.handleMouseEnterBound);
-      this.$el[0].removeEventListener('mouseleave', this.handleMouseLeaveBound);
+      this.el.removeEventListener('mouseenter', this._handleMouseEnterBound);
+      this.el.removeEventListener('mouseleave', this._handleMouseLeaveBound);
+      this.el.removeEventListener('focus', this._handleFocusBound, true);
+      this.el.removeEventListener('blur', this._handleBlurBound, true);
     }
 
-    open() {
+    open(isManual) {
       if (this.isOpen) {
         return;
       }
-
+      isManual = isManual === undefined ? true : undefined; // Default value true
       this.isOpen = true;
       // Update tooltip content with HTML attribute options
       this.options = $.extend({}, this.options, this._getAttributeOptions());
       this._updateTooltipContent();
-      this._setEnterDelayTimeout();
+      this._setEnterDelayTimeout(isManual);
     }
 
     close() {
-      if(!this.isOpen) {
+      if (!this.isOpen) {
         return;
       }
 
+      this.isHovered = false;
+      this.isFocused = false;
       this.isOpen = false;
       this._setExitDelayTimeout();
     }
 
     /**
-      * Create timeout which delays when the tooltip closes
-      */
+     * Create timeout which delays when the tooltip closes
+     */
     _setExitDelayTimeout() {
       clearTimeout(this._exitDelayTimeout);
 
       this._exitDelayTimeout = setTimeout(() => {
-        if (this.isHovered) {
+        if (this.isHovered || this.isFocused) {
           return;
-        } else {
-          this._animateOut();
         }
+
+        this._animateOut();
       }, this.options.exitDelay);
     }
 
     /**
      * Create timeout which delays when the toast closes
      */
-    _setEnterDelayTimeout() {
+    _setEnterDelayTimeout(isManual) {
       clearTimeout(this._enterDelayTimeout);
 
       this._enterDelayTimeout = setTimeout(() => {
-        if (!this.isHovered) {
+        if (!this.isHovered && !this.isFocused && !isManual) {
           return;
-        } else {
-          this._animateIn();
         }
+
+        this._animateIn();
       }, this.options.enterDelay);
     }
 
     _positionTooltip() {
-      let origin = this.$el[0],
-          tooltip = this.tooltipEl,
-          originHeight = origin.offsetHeight,
-          originWidth = origin.offsetWidth,
-          tooltipHeight = tooltip.offsetHeight,
-          tooltipWidth = tooltip.offsetWidth,
-          newCoordinates,
-          margin = this.options.margin,
-          targetTop,
-          targetLeft;
+      let origin = this.el,
+        tooltip = this.tooltipEl,
+        originHeight = origin.offsetHeight,
+        originWidth = origin.offsetWidth,
+        tooltipHeight = tooltip.offsetHeight,
+        tooltipWidth = tooltip.offsetWidth,
+        newCoordinates,
+        margin = this.options.margin,
+        targetTop,
+        targetLeft;
 
-      this.xMovement = 0,
-      this.yMovement = 0;
+      (this.xMovement = 0), (this.yMovement = 0);
 
       targetTop = origin.getBoundingClientRect().top + M.getDocumentScrollTop();
       targetLeft = origin.getBoundingClientRect().left + M.getDocumentScrollLeft();
 
       if (this.options.position === 'top') {
-        targetTop += -(tooltipHeight) - margin;
-        targetLeft += originWidth/2 - tooltipWidth/2;
-        this.yMovement = -(this.options.transitionMovement);
-
+        targetTop += -tooltipHeight - margin;
+        targetLeft += originWidth / 2 - tooltipWidth / 2;
+        this.yMovement = -this.options.transitionMovement;
       } else if (this.options.position === 'right') {
-        targetTop += originHeight/2 - tooltipHeight/2;
+        targetTop += originHeight / 2 - tooltipHeight / 2;
         targetLeft += originWidth + margin;
         this.xMovement = this.options.transitionMovement;
-
       } else if (this.options.position === 'left') {
-        targetTop += originHeight/2 - tooltipHeight/2;
-        targetLeft += -(tooltipWidth) - margin;
-        this.xMovement = -(this.options.transitionMovement);
-
+        targetTop += originHeight / 2 - tooltipHeight / 2;
+        targetLeft += -tooltipWidth - margin;
+        this.xMovement = -this.options.transitionMovement;
       } else {
         targetTop += originHeight + margin;
-        targetLeft += originWidth/2 - tooltipWidth/2;
+        targetLeft += originWidth / 2 - tooltipWidth / 2;
         this.yMovement = this.options.transitionMovement;
       }
 
       newCoordinates = this._repositionWithinScreen(
-        targetLeft, targetTop, tooltipWidth, tooltipHeight);
+        targetLeft,
+        targetTop,
+        tooltipWidth,
+        tooltipHeight
+      );
       $(tooltip).css({
         top: newCoordinates.y + 'px',
         left: newCoordinates.x + 'px'
@@ -225,53 +223,66 @@
         newY -= newY + height - window.innerHeight;
       }
 
-      return {x: newX + scrollLeft, y: newY + scrollTop};
+      return {
+        x: newX + scrollLeft,
+        y: newY + scrollTop
+      };
     }
 
     _animateIn() {
       this._positionTooltip();
       this.tooltipEl.style.visibility = 'visible';
-      Vel(this.tooltipEl, 'stop');
-      Vel(
-        this.tooltipEl, {
-          opacity: 1,
-          translateX: this.xMovement,
-          translateY: this.yMovement
-        }, {
-          duration: this.options.inDuration,
-          easing: 'easeOutCubic',
-          queue: false
-        });
+      anim.remove(this.tooltipEl);
+      anim({
+        targets: this.tooltipEl,
+        opacity: 1,
+        translateX: this.xMovement,
+        translateY: this.yMovement,
+        duration: this.options.inDuration,
+        easing: 'easeOutCubic'
+      });
     }
 
     _animateOut() {
-      Vel(this.tooltipEl, 'stop');
-      Vel(
-        this.tooltipEl, {
-          opacity: 0,
-          translateX: 0,
-          translateY: 0,
-        }, {
-          duration: this.options.outDuration,
-          easing: 'easeOutCubic',
-          queue: false
+      anim.remove(this.tooltipEl);
+      anim({
+        targets: this.tooltipEl,
+        opacity: 0,
+        translateX: 0,
+        translateY: 0,
+        duration: this.options.outDuration,
+        easing: 'easeOutCubic'
       });
     }
 
     _handleMouseEnter() {
       this.isHovered = true;
-      this.open();
+      this.isFocused = false; // Allows close of tooltip when opened by focus.
+      this.open(false);
     }
 
     _handleMouseLeave() {
       this.isHovered = false;
+      this.isFocused = false; // Allows close of tooltip when opened by focus.
+      this.close();
+    }
+
+    _handleFocus() {
+      if (M.tabPressed) {
+        this.isFocused = true;
+        this.open(false);
+      }
+    }
+
+    _handleBlur() {
+      this.isFocused = false;
       this.close();
     }
 
     _getAttributeOptions() {
       let attributeOptions = {};
-      let tooltipTextOption = this.$el[0].getAttribute('data-tooltip');
-      let positionOption = this.$el[0].getAttribute('data-position');
+      let tooltipTextOption = this.el.getAttribute('data-tooltip');
+      let positionOption = this.el.getAttribute('data-position');
 
       if (tooltipTextOption) {
         attributeOptions.html = tooltipTextOption;
@@ -289,5 +300,4 @@
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Tooltip, 'tooltip', 'M_Tooltip');
   }
-
-})(cash, M.Vel);
+})(cash, M.anime);

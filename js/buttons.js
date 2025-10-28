@@ -1,4 +1,4 @@
-(function ($, Vel) {
+(function($, anim) {
   'use strict';
 
   let _defaults = {
@@ -13,7 +13,7 @@
    * @class
    *
    */
-  class FloatingActionButton {
+  class FloatingActionButton extends Component {
     /**
      * Construct FloatingActionButton instance
      * @constructor
@@ -21,14 +21,8 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(FloatingActionButton, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_FloatingActionButton) {
-        el.M_FloatingActionButton.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_FloatingActionButton = this;
 
       /**
@@ -45,17 +39,17 @@
       this.$menu = this.$el.children('ul').first();
       this.$floatingBtns = this.$el.find('ul .btn-floating');
       this.$floatingBtnsReverse = this.$el.find('ul .btn-floating').reverse();
+      this.offsetY = 0;
+      this.offsetX = 0;
+
+      this.$el.addClass(`direction-${this.options.direction}`);
       if (this.options.direction === 'top') {
-        this.$el.addClass('direction-top');
         this.offsetY = 40;
       } else if (this.options.direction === 'right') {
-        this.$el.addClass('direction-right');
         this.offsetX = -40;
       } else if (this.options.direction === 'bottom') {
-        this.$el.addClass('direction-bottom');
         this.offsetY = -40;
       } else {
-        this.$el.addClass('direction-left');
         this.offsetX = 40;
       }
       this._setupEventHandlers();
@@ -65,12 +59,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new FloatingActionButton(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -100,7 +90,6 @@
       if (this.options.hoverEnabled && !this.options.toolbarEnabled) {
         this.el.addEventListener('mouseenter', this._handleOpenBound);
         this.el.addEventListener('mouseleave', this._handleCloseBound);
-
       } else {
         this.el.addEventListener('click', this._handleFABClickBound);
       }
@@ -113,7 +102,6 @@
       if (this.options.hoverEnabled && !this.options.toolbarEnabled) {
         this.el.removeEventListener('mouseenter', this._handleOpenBound);
         this.el.removeEventListener('mouseleave', this._handleCloseBound);
-
       } else {
         this.el.removeEventListener('click', this._handleFABClickBound);
       }
@@ -125,7 +113,6 @@
     _handleFABClick() {
       if (this.isOpen) {
         this.close();
-
       } else {
         this.open();
       }
@@ -180,18 +167,19 @@
      */
     _animateInFAB() {
       this.$el.addClass('active');
-      Vel.hook(this.$floatingBtns, 'scaleX', 0.4);
-      Vel.hook(this.$floatingBtns, 'scaleY', 0.4);
-      Vel.hook(this.$floatingBtns, 'translateY', this.offsetY + 'px');
-      Vel.hook(this.$floatingBtns, 'translateX', this.offsetX + 'px');
 
       let time = 0;
-      this.$floatingBtnsReverse.each( function () {
-        Vel(
-          this,
-          { opacity: "1", scaleX: 1, scaleY: 1, translateY: 0, translateX: 0},
-          { duration: 80, delay: time }
-        );
+      this.$floatingBtnsReverse.each((el) => {
+        anim({
+          targets: el,
+          opacity: 1,
+          scale: [0.4, 1],
+          translateY: [this.offsetY, 0],
+          translateX: [this.offsetX, 0],
+          duration: 275,
+          delay: time,
+          easing: 'easeInOutQuad'
+        });
         time += 40;
       });
     }
@@ -200,13 +188,21 @@
      * Classic FAB Menu close
      */
     _animateOutFAB() {
-      this.$el.removeClass('active');
-      Vel(this.$floatingBtns, 'stop');
-      Vel(
-        this.$floatingBtns,
-        { opacity: "0", scaleX: .4, scaleY: .4, translateY: this.offsetY, translateX: this.offsetX},
-        { duration: 80 }
-      );
+      this.$floatingBtnsReverse.each((el) => {
+        anim.remove(el);
+        anim({
+          targets: el,
+          opacity: 0,
+          scale: 0.4,
+          translateY: this.offsetY,
+          translateX: this.offsetX,
+          duration: 175,
+          easing: 'easeOutQuad',
+          complete: () => {
+            this.$el.removeClass('active');
+          }
+        });
+      });
     }
 
     /**
@@ -221,7 +217,7 @@
       let fabColor = this.$anchor.css('background-color');
       this.$anchor.append(backdrop);
 
-      this.offsetX = btnRect.left - (windowWidth / 2) + (btnRect.width / 2);
+      this.offsetX = btnRect.left - windowWidth / 2 + btnRect.width / 2;
       this.offsetY = windowHeight - btnRect.bottom;
       scaleFactor = windowWidth / backdrop[0].clientWidth;
       this.btnBottom = btnRect.bottom;
@@ -246,11 +242,11 @@
         'background-color': fabColor
       });
 
-
       setTimeout(() => {
         this.$el.css({
           transform: '',
-          transition: 'transform .2s cubic-bezier(0.550, 0.085, 0.680, 0.530), background-color 0s linear .2s'
+          transition:
+            'transform .2s cubic-bezier(0.550, 0.085, 0.680, 0.530), background-color 0s linear .2s'
         });
         this.$anchor.css({
           overflow: 'visible',
@@ -267,9 +263,12 @@
             transform: 'scale(' + scaleFactor + ')',
             transition: 'transform .2s cubic-bezier(0.550, 0.055, 0.675, 0.190)'
           });
-          this.$menu.children('li').children('a').css({
-            opacity: 1
-          });
+          this.$menu
+            .children('li')
+            .children('a')
+            .css({
+              opacity: 1
+            });
 
           // Scroll to close.
           this._handleDocumentClickBound = this._handleDocumentClick.bind(this);
@@ -286,9 +285,9 @@
       let windowWidth = window.innerWidth;
       let windowHeight = window.innerHeight;
       let backdrop = this.$el.find('.fab-backdrop');
-      let fabColor = anchor.css('background-color');
+      let fabColor = this.$anchor.css('background-color');
 
-      this.offsetX = this.btnLeft - (windowWidth / 2) + (this.btnWidth / 2);
+      this.offsetX = this.btnLeft - windowWidth / 2 + this.btnWidth / 2;
       this.offsetY = windowHeight - this.btnBottom;
 
       // Hide backdrop
@@ -304,9 +303,12 @@
         transform: 'scale(0)',
         'background-color': fabColor
       });
-      this.$menu.children('li').children('a').css({
-        opacity: ''
-      });
+      this.$menu
+        .children('li')
+        .children('a')
+        .css({
+          opacity: ''
+        });
 
       setTimeout(() => {
         backdrop.remove();
@@ -343,7 +345,10 @@
   M.FloatingActionButton = FloatingActionButton;
 
   if (M.jQueryLoaded) {
-    M.initializeJqueryWrapper(FloatingActionButton, 'floatingActionButton', 'M_FloatingActionButton');
+    M.initializeJqueryWrapper(
+      FloatingActionButton,
+      'floatingActionButton',
+      'M_FloatingActionButton'
+    );
   }
-
-}( cash, M.Vel ));
+})(cash, M.anime);

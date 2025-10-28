@@ -1,37 +1,34 @@
-(function ($) {
+(function($) {
   'use strict';
 
   let _defaults = {
+    onOpen: undefined,
+    onClose: undefined
   };
-
 
   /**
    * @class
    *
    */
-  class FeatureDiscovery {
+  class TapTarget extends Component {
     /**
-     * Construct FeatureDiscovery instance
+     * Construct TapTarget instance
      * @constructor
      * @param {Element} el
      * @param {Object} options
      */
     constructor(el, options) {
+      super(TapTarget, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_FeatureDiscovery) {
-        el.M_FeatureDiscovery.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
-      this.el.M_FeatureDiscovery = this;
+      this.el.M_TapTarget = this;
 
       /**
        * Options for the select
-       * @member FeatureDiscovery#options
+       * @member TapTarget#options
+       * @prop {Function} onOpen - Callback function called when feature discovery is opened
+       * @prop {Function} onClose - Callback function called when feature discovery is closed
        */
-      this.options = $.extend({}, FeatureDiscovery.defaults, options);
+      this.options = $.extend({}, TapTarget.defaults, options);
 
       this.isOpen = false;
 
@@ -47,12 +44,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new FeatureDiscovery(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -60,7 +53,7 @@
      */
     static getInstance(el) {
       let domElem = !!el.jquery ? el[0] : el;
-      return domElem.M_FeatureDiscovery;
+      return domElem.M_TapTarget;
     }
 
     /**
@@ -68,7 +61,7 @@
      */
     destroy() {
       this._removeEventHandlers();
-      this.el.FeatureDiscovery = undefined;
+      this.el.TapTarget = undefined;
     }
 
     /**
@@ -135,7 +128,7 @@
     }
 
     /**
-     * Setup feature discovery
+     * Setup Tap Target
      */
     _setup() {
       // Creating tap target
@@ -197,8 +190,12 @@
       // Calculating origin
       let originWidth = this.$origin.outerWidth();
       let originHeight = this.$origin.outerHeight();
-      let originTop = isFixed ? this.$origin.offset().top - M.getDocumentScrollTop() : this.$origin.offset().top;
-      let originLeft = isFixed ? this.$origin.offset().left - M.getDocumentScrollLeft() : this.$origin.offset().left;
+      let originTop = isFixed
+        ? this.$origin.offset().top - M.getDocumentScrollTop()
+        : this.$origin.offset().top;
+      let originLeft = isFixed
+        ? this.$origin.offset().left - M.getDocumentScrollLeft()
+        : this.$origin.offset().left;
 
       // Calculating screen
       let windowWidth = window.innerWidth;
@@ -209,36 +206,40 @@
       let isRight = originLeft > centerX;
       let isTop = originTop <= centerY;
       let isBottom = originTop > centerY;
-      let isCenterX = originLeft >= windowWidth*0.25 && originLeft <= windowWidth*0.75;
+      let isCenterX = originLeft >= windowWidth * 0.25 && originLeft <= windowWidth * 0.75;
 
       // Calculating tap target
       let tapTargetWidth = this.$el.outerWidth();
       let tapTargetHeight = this.$el.outerHeight();
-      let tapTargetTop = originTop + originHeight/2 - tapTargetHeight/2;
-      let tapTargetLeft = originLeft + originWidth/2 - tapTargetWidth/2;
+      let tapTargetTop = originTop + originHeight / 2 - tapTargetHeight / 2;
+      let tapTargetLeft = originLeft + originWidth / 2 - tapTargetWidth / 2;
       let tapTargetPosition = isFixed ? 'fixed' : 'absolute';
 
       // Calculating content
-      let tapTargetTextWidth = isCenterX ? tapTargetWidth : tapTargetWidth/2 + originWidth;
-      let tapTargetTextHeight = tapTargetHeight/2;
-      let tapTargetTextTop = isTop ? tapTargetHeight/2 : 0;
+      let tapTargetTextWidth = isCenterX ? tapTargetWidth : tapTargetWidth / 2 + originWidth;
+      let tapTargetTextHeight = tapTargetHeight / 2;
+      let tapTargetTextTop = isTop ? tapTargetHeight / 2 : 0;
       let tapTargetTextBottom = 0;
-      let tapTargetTextLeft = isLeft && !isCenterX ? tapTargetWidth/2 - originWidth : 0;
+      let tapTargetTextLeft = isLeft && !isCenterX ? tapTargetWidth / 2 - originWidth : 0;
       let tapTargetTextRight = 0;
       let tapTargetTextPadding = originWidth;
       let tapTargetTextAlign = isBottom ? 'bottom' : 'top';
 
       // Calculating wave
-      let tapTargetWaveWidth = originWidth > originHeight ? originWidth*2 : originWidth*2;
+      let tapTargetWaveWidth = originWidth > originHeight ? originWidth * 2 : originWidth * 2;
       let tapTargetWaveHeight = tapTargetWaveWidth;
-      let tapTargetWaveTop = tapTargetHeight/2 - tapTargetWaveHeight/2;
-      let tapTargetWaveLeft = tapTargetWidth/2 - tapTargetWaveWidth/2;
+      let tapTargetWaveTop = tapTargetHeight / 2 - tapTargetWaveHeight / 2;
+      let tapTargetWaveLeft = tapTargetWidth / 2 - tapTargetWaveWidth / 2;
 
       // Setting tap target
       let tapTargetWrapperCssObj = {};
       tapTargetWrapperCssObj.top = isTop ? tapTargetTop + 'px' : '';
-      tapTargetWrapperCssObj.right = isRight ? (windowWidth - tapTargetLeft - tapTargetWidth) + 'px' : '';
-      tapTargetWrapperCssObj.bottom = isBottom ? (windowHeight - tapTargetTop - tapTargetHeight) + 'px' : '';
+      tapTargetWrapperCssObj.right = isRight
+        ? windowWidth - tapTargetLeft - tapTargetWidth + 'px'
+        : '';
+      tapTargetWrapperCssObj.bottom = isBottom
+        ? windowHeight - tapTargetTop - tapTargetHeight + 'px'
+        : '';
       tapTargetWrapperCssObj.left = isLeft ? tapTargetLeft + 'px' : '';
       tapTargetWrapperCssObj.position = tapTargetPosition;
       $(this.wrapper).css(tapTargetWrapperCssObj);
@@ -265,38 +266,49 @@
     }
 
     /**
-     * Open Feature Discovery
+     * Open TapTarget
      */
     open() {
       if (this.isOpen) {
         return;
       }
 
+      // onOpen callback
+      if (typeof this.options.onOpen === 'function') {
+        this.options.onOpen.call(this, this.$origin[0]);
+      }
+
       this.isOpen = true;
       this.wrapper.classList.add('open');
 
       document.body.addEventListener('click', this._handleDocumentClickBound, true);
+      document.body.addEventListener('touchend', this._handleDocumentClickBound);
     }
 
     /**
-     * Close Feature Discovery
+     * Close Tap Target
      */
     close() {
       if (!this.isOpen) {
         return;
       }
 
+      // onClose callback
+      if (typeof this.options.onClose === 'function') {
+        this.options.onClose.call(this, this.$origin[0]);
+      }
+
       this.isOpen = false;
       this.wrapper.classList.remove('open');
 
       document.body.removeEventListener('click', this._handleDocumentClickBound, true);
+      document.body.removeEventListener('touchend', this._handleDocumentClickBound);
     }
   }
 
-  M.FeatureDiscovery = FeatureDiscovery;
+  M.TapTarget = TapTarget;
 
   if (M.jQueryLoaded) {
-    M.initializeJqueryWrapper(FeatureDiscovery, 'featureDiscovery', 'M_FeatureDiscovery');
+    M.initializeJqueryWrapper(TapTarget, 'tapTarget', 'M_TapTarget');
   }
-
-}( cash ));
+})(cash);

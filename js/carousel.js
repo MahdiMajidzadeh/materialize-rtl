@@ -1,4 +1,4 @@
-(function ($) {
+(function($) {
   'use strict';
 
   let _defaults = {
@@ -6,18 +6,18 @@
     dist: -100, // zoom scale TODO: make this more intuitive as an option
     shift: 0, // spacing for center image
     padding: 0, // Padding between non center items
+    numVisible: 5, // Number of visible items in carousel
     fullWidth: false, // Change to full width styles
     indicators: false, // Toggle indicators
     noWrap: false, // Don't wrap around and cycle through items.
     onCycleTo: null // Callback for when a new slide is cycled to.
   };
 
-
   /**
    * @class
    *
    */
-  class Carousel {
+  class Carousel extends Component {
     /**
      * Construct Carousel instance
      * @constructor
@@ -25,15 +25,8 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Carousel, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Carousel) {
-        el.M_Carousel.destroy();
-      }
-
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Carousel = this;
 
       /**
@@ -41,8 +34,9 @@
        * @member Carousel#options
        * @prop {Number} duration
        * @prop {Number} dist
-       * @prop {number} shift
-       * @prop {number} padding
+       * @prop {Number} shift
+       * @prop {Number} padding
+       * @prop {Number} numVisible
        * @prop {Boolean} fullWidth
        * @prop {Boolean} indicators
        * @prop {Boolean} noWrap
@@ -58,8 +52,14 @@
       this.dragged = false;
       this.offset = this.target = 0;
       this.images = [];
-      this.itemWidth = this.$el.find('.carousel-item').first().innerWidth();
-      this.itemHeight = this.$el.find('.carousel-item').first().innerHeight();
+      this.itemWidth = this.$el
+        .find('.carousel-item')
+        .first()
+        .innerWidth();
+      this.itemHeight = this.$el
+        .find('.carousel-item')
+        .first()
+        .innerHeight();
       this.dim = this.itemWidth * 2 + this.options.padding || 1; // Make sure dim is non zero for divisions.
       this._autoScrollBound = this._autoScroll.bind(this);
       this._trackBound = this._track.bind(this);
@@ -95,6 +95,9 @@
       }
       this.count = this.images.length;
 
+      // Cap numVisible at count
+      this.options.numVisible = Math.min(this.count, this.options.numVisible);
+
       // Setup cross browser string
       this.xform = 'transform';
       ['webkit', 'Moz', 'O', 'ms'].every((prefix) => {
@@ -114,12 +117,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Carousel(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -237,13 +236,11 @@
             this.reference = x;
             this._scroll(this.offset + delta);
           }
-
         } else if (this.dragged) {
           // If dragging don't allow vertical scroll.
           e.preventDefault();
           e.stopPropagation();
           return false;
-
         } else {
           // Vertical scrolling.
           this.verticalDragged = true;
@@ -306,9 +303,10 @@
         e.preventDefault();
         e.stopPropagation();
         return false;
-
       } else if (!this.options.fullWidth) {
-        let clickedIndex = $(e.target).closest('.carousel-item').index();
+        let clickedIndex = $(e.target)
+          .closest('.carousel-item')
+          .index();
         let diff = this._wrap(this.center) - clickedIndex;
 
         // Disable clicks if carousel was shifted by click
@@ -339,7 +337,10 @@
      */
     _handleResize(e) {
       if (this.options.fullWidth) {
-        this.itemWidth = this.$el.find('.carousel-item').first().innerWidth();
+        this.itemWidth = this.$el
+          .find('.carousel-item')
+          .first()
+          .innerWidth();
         this.imageHeight = this.$el.find('.carousel-item.active').height();
         this.dim = this.itemWidth * 2 + this.options.padding;
         this.offset = this.center * 2 * this.itemWidth;
@@ -350,13 +351,14 @@
       }
     }
 
-
     /**
      * Set carousel height based on first slide
      * @param {Booleam} imageOnly - true for image slides
      */
     _setCarouselHeight(imageOnly) {
-      let firstSlide = this.$el.find('.carousel-item.active').length ? this.$el.find('.carousel-item.active').first() : this.$el.find('.carousel-item').first();
+      let firstSlide = this.$el.find('.carousel-item.active').length
+        ? this.$el.find('.carousel-item.active').first()
+        : this.$el.find('.carousel-item').first();
       let firstImage = firstSlide.find('img').first();
       if (firstImage.length) {
         if (firstImage[0].complete) {
@@ -368,7 +370,7 @@
             // If image still has no height, use the natural dimensions to calculate
             let naturalWidth = firstImage[0].naturalWidth;
             let naturalHeight = firstImage[0].naturalHeight;
-            let adjustedHeight = (this.$el.width() / naturalWidth) * naturalHeight;
+            let adjustedHeight = this.$el.width() / naturalWidth * naturalHeight;
             this.$el.css('height', adjustedHeight + 'px');
           }
         } else {
@@ -389,7 +391,7 @@
      */
     _xpos(e) {
       // touch event
-      if (e.targetTouches && (e.targetTouches.length >= 1)) {
+      if (e.targetTouches && e.targetTouches.length >= 1) {
         return e.targetTouches[0].clientX;
       }
 
@@ -403,7 +405,7 @@
      */
     _ypos(e) {
       // touch event
-      if (e.targetTouches && (e.targetTouches.length >= 1)) {
+      if (e.targetTouches && e.targetTouches.length >= 1) {
         return e.targetTouches[0].clientY;
       }
 
@@ -416,7 +418,7 @@
      * @param {Number} x
      */
     _wrap(x) {
-      return (x >= this.count) ? (x % this.count) : (x < 0) ? this._wrap(this.count + (x % this.count)) : x;
+      return x >= this.count ? x % this.count : x < 0 ? this._wrap(this.count + x % this.count) : x;
     }
 
     /**
@@ -470,30 +472,45 @@
       }, this.options.duration);
 
       // Start actual scroll
-      let i, half, delta, dir, tween, el, alignment, zTranslation, tweenedOpacity;
+      let i,
+        half,
+        delta,
+        dir,
+        tween,
+        el,
+        alignment,
+        zTranslation,
+        tweenedOpacity,
+        centerTweenedOpacity;
       let lastCenter = this.center;
+      let numVisibleOffset = 1 / this.options.numVisible;
 
-      this.offset = (typeof x === 'number') ? x : this.offset;
+      this.offset = typeof x === 'number' ? x : this.offset;
       this.center = Math.floor((this.offset + this.dim / 2) / this.dim);
       delta = this.offset - this.center * this.dim;
-      dir = (delta < 0) ? 1 : -1;
+      dir = delta < 0 ? 1 : -1;
       tween = -dir * delta * 2 / this.dim;
       half = this.count >> 1;
 
-      if (!this.options.fullWidth) {
+      if (this.options.fullWidth) {
+        alignment = 'translateX(0)';
+        centerTweenedOpacity = 1;
+      } else {
         alignment = 'translateX(' + (this.el.clientWidth - this.itemWidth) / 2 + 'px) ';
         alignment += 'translateY(' + (this.el.clientHeight - this.itemHeight) / 2 + 'px)';
-      } else {
-        alignment = 'translateX(0)';
+        centerTweenedOpacity = 1 - numVisibleOffset * tween;
       }
 
       // Set indicator active
       if (this.showIndicators) {
-        let diff = (this.center % this.count);
+        let diff = this.center % this.count;
         let activeIndicator = this.$indicators.find('.indicator-item.active');
         if (activeIndicator.index() !== diff) {
           activeIndicator.removeClass('active');
-          this.$indicators.find('.indicator-item').eq(diff)[0].classList.add('active');
+          this.$indicators
+            .find('.indicator-item')
+            .eq(diff)[0]
+            .classList.add('active');
         }
       }
 
@@ -507,55 +524,44 @@
           this.$el.find('.carousel-item').removeClass('active');
           el.classList.add('active');
         }
-        el.style[this.xform] = alignment +
-          ' translateX(' + (-delta / 2) + 'px)' +
-          ' translateX(' + (dir * this.options.shift * tween * i) + 'px)' +
-          ' translateZ(' + (this.options.dist * tween) + 'px)';
-        el.style.zIndex = 0;
-        if (this.options.fullWidth) { tweenedOpacity = 1; }
-        else { tweenedOpacity = 1 - 0.2 * tween; }
-        el.style.opacity = tweenedOpacity;
-        el.style.visibility = 'visible';
+        let transformString = `${alignment} translateX(${-delta / 2}px) translateX(${dir *
+          this.options.shift *
+          tween *
+          i}px) translateZ(${this.options.dist * tween}px)`;
+        this._updateItemStyle(el, centerTweenedOpacity, 0, transformString);
       }
 
       for (i = 1; i <= half; ++i) {
         // right side
         if (this.options.fullWidth) {
           zTranslation = this.options.dist;
-          tweenedOpacity = (i === half && delta < 0) ? 1 - tween : 1;
+          tweenedOpacity = i === half && delta < 0 ? 1 - tween : 1;
         } else {
           zTranslation = this.options.dist * (i * 2 + tween * dir);
-          tweenedOpacity = 1 - 0.2 * (i * 2 + tween * dir);
+          tweenedOpacity = 1 - numVisibleOffset * (i * 2 + tween * dir);
         }
         // Don't show wrapped items.
         if (!this.noWrap || this.center + i < this.count) {
           el = this.images[this._wrap(this.center + i)];
-          el.style[this.xform] = alignment +
-            ' translateX(' + (this.options.shift + (this.dim * i - delta) / 2) + 'px)' +
-            ' translateZ(' + zTranslation + 'px)';
-          el.style.zIndex = -i;
-          el.style.opacity = tweenedOpacity;
-          el.style.visibility = 'visible';
+          let transformString = `${alignment} translateX(${this.options.shift +
+            (this.dim * i - delta) / 2}px) translateZ(${zTranslation}px)`;
+          this._updateItemStyle(el, tweenedOpacity, -i, transformString);
         }
-
 
         // left side
         if (this.options.fullWidth) {
           zTranslation = this.options.dist;
-          tweenedOpacity = (i === half && delta > 0) ? 1 - tween : 1;
+          tweenedOpacity = i === half && delta > 0 ? 1 - tween : 1;
         } else {
           zTranslation = this.options.dist * (i * 2 - tween * dir);
-          tweenedOpacity = 1 - 0.2 * (i * 2 - tween * dir);
+          tweenedOpacity = 1 - numVisibleOffset * (i * 2 - tween * dir);
         }
         // Don't show wrapped items.
         if (!this.noWrap || this.center - i >= 0) {
           el = this.images[this._wrap(this.center - i)];
-          el.style[this.xform] = alignment +
-            ' translateX(' + (-this.options.shift + (-this.dim * i - delta) / 2) + 'px)' +
-            ' translateZ(' + zTranslation + 'px)';
-          el.style.zIndex = -i;
-          el.style.opacity = tweenedOpacity;
-          el.style.visibility = 'visible';
+          let transformString = `${alignment} translateX(${-this.options.shift +
+            (-this.dim * i - delta) / 2}px) translateZ(${zTranslation}px)`;
+          this._updateItemStyle(el, tweenedOpacity, -i, transformString);
         }
       }
 
@@ -563,29 +569,37 @@
       // Don't show wrapped items.
       if (!this.noWrap || (this.center >= 0 && this.center < this.count)) {
         el = this.images[this._wrap(this.center)];
-        el.style[this.xform] = alignment +
-          ' translateX(' + (-delta / 2) + 'px)' +
-          ' translateX(' + (dir * this.options.shift * tween) + 'px)' +
-          ' translateZ(' + (this.options.dist * tween) + 'px)';
-        el.style.zIndex = 0;
-        if (this.options.fullWidth) { tweenedOpacity = 1; }
-        else { tweenedOpacity = 1 - 0.2 * tween; }
-        el.style.opacity = tweenedOpacity;
-        el.style.visibility = 'visible';
+        let transformString = `${alignment} translateX(${-delta / 2}px) translateX(${dir *
+          this.options.shift *
+          tween}px) translateZ(${this.options.dist * tween}px)`;
+        this._updateItemStyle(el, centerTweenedOpacity, 0, transformString);
       }
 
       // onCycleTo callback
       let $currItem = this.$el.find('.carousel-item').eq(this._wrap(this.center));
-      if (lastCenter !== this.center &&
-          typeof(this.options.onCycleTo) === "function") {
+      if (lastCenter !== this.center && typeof this.options.onCycleTo === 'function') {
         this.options.onCycleTo.call(this, $currItem[0], this.dragged);
       }
 
       // One time callback
-      if (typeof(this.oneTimeCallback) === "function") {
+      if (typeof this.oneTimeCallback === 'function') {
         this.oneTimeCallback.call(this, $currItem[0], this.dragged);
         this.oneTimeCallback = null;
       }
+    }
+
+    /**
+     * Cycle to target
+     * @param {Element} el
+     * @param {Number} opacity
+     * @param {Number} zIndex
+     * @param {String} transform
+     */
+    _updateItemStyle(el, opacity, zIndex, transform) {
+      el.style[this.xform] = transform;
+      el.style.zIndex = zIndex;
+      el.style.opacity = opacity;
+      el.style.visibility = 'visible';
     }
 
     /**
@@ -594,30 +608,33 @@
      * @param {Function} callback
      */
     _cycleTo(n, callback) {
-      let diff = (this.center % this.count) - n;
+      let diff = this.center % this.count - n;
 
       // Account for wraparound.
       if (!this.noWrap) {
         if (diff < 0) {
-          if (Math.abs(diff + this.count) < Math.abs(diff)) { diff += this.count; }
-
+          if (Math.abs(diff + this.count) < Math.abs(diff)) {
+            diff += this.count;
+          }
         } else if (diff > 0) {
-          if (Math.abs(diff - this.count) < diff) { diff -= this.count; }
+          if (Math.abs(diff - this.count) < diff) {
+            diff -= this.count;
+          }
         }
       }
 
-      this.target = (this.dim * Math.round(this.offset / this.dim));
+      this.target = this.dim * Math.round(this.offset / this.dim);
       // Next
       if (diff < 0) {
-        this.target += (this.dim * Math.abs(diff));
+        this.target += this.dim * Math.abs(diff);
 
-      // Prev
+        // Prev
       } else if (diff > 0) {
-        this.target -= (this.dim * diff);
+        this.target -= this.dim * diff;
       }
 
       // Set one time callback
-      if (typeof(callback) === "function") {
+      if (typeof callback === 'function') {
         this.oneTimeCallback = callback;
       }
 
@@ -629,7 +646,6 @@
       }
     }
 
-
     /**
      * Cycle to next item
      * @param {Number} [n]
@@ -640,12 +656,12 @@
       }
 
       let index = this.center + n;
-      if (index > this.count || index < 0) {
+      if (index >= this.count || index < 0) {
         if (this.noWrap) {
           return;
-        } else {
-          index = this._wrap(index);
         }
+
+        index = this._wrap(index);
       }
       this._cycleTo(index);
     }
@@ -660,12 +676,12 @@
       }
 
       let index = this.center - n;
-      if (index > this.count || index < 0) {
+      if (index >= this.count || index < 0) {
         if (this.noWrap) {
           return;
-        } else {
-          index = this._wrap(index);
         }
+
+        index = this._wrap(index);
       }
 
       this._cycleTo(index);
@@ -684,9 +700,9 @@
       if (n > this.count || n < 0) {
         if (this.noWrap) {
           return;
-        } else {
-          n = this._wrap(n);
         }
+
+        n = this._wrap(n);
       }
 
       this._cycleTo(n, callback);
@@ -698,5 +714,4 @@
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Carousel, 'carousel', 'M_Carousel');
   }
-
-}( cash ));
+})(cash);

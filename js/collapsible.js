@@ -1,4 +1,4 @@
-(function ($, Vel) {
+(function($, anim) {
   'use strict';
 
   let _defaults = {
@@ -11,12 +11,11 @@
     outDuration: 300
   };
 
-
   /**
    * @class
    *
    */
-  class Collapsible {
+  class Collapsible extends Component {
     /**
      * Construct Collapsible instance
      * @constructor
@@ -24,14 +23,8 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Collapsible, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Collapsible) {
-        el.M_Collapsible.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Collapsible = this;
 
       /**
@@ -47,14 +40,19 @@
        */
       this.options = $.extend({}, Collapsible.defaults, options);
 
+      // Setup tab indices
+      this.$headers = this.$el.children('li').children('.collapsible-header');
+      this.$headers.attr('tabindex', 0);
+
       this._setupEventHandlers();
 
       // Open first active
       let $activeBodies = this.$el.children('li.active').children('.collapsible-body');
-      if (this.options.accordion) { // Handle Accordion
+      if (this.options.accordion) {
+        // Handle Accordion
         $activeBodies.first().css('display', 'block');
-
-      } else { // Handle Expandables
+      } else {
+        // Handle Expandables
         $activeBodies.css('display', 'block');
       }
     }
@@ -63,12 +61,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Collapsible(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -92,7 +86,11 @@
      */
     _setupEventHandlers() {
       this._handleCollapsibleClickBound = this._handleCollapsibleClick.bind(this);
+      this._handleCollapsibleKeydownBound = this._handleCollapsibleKeydown.bind(this);
       this.el.addEventListener('click', this._handleCollapsibleClickBound);
+      this.$headers.each((header) => {
+        header.addEventListener('keydown', this._handleCollapsibleKeydownBound);
+      });
     }
 
     /**
@@ -100,6 +98,9 @@
      */
     _removeEventHandlers() {
       this.el.removeEventListener('click', this._handleCollapsibleClickBound);
+      this.$headers.each((header) => {
+        header.removeEventListener('keydown', this._handleCollapsibleKeydownBound);
+      });
     }
 
     /**
@@ -126,6 +127,16 @@
     }
 
     /**
+     * Handle Collapsible Keydown
+     * @param {Event} e
+     */
+    _handleCollapsibleKeydown(e) {
+      if (e.keyCode === 13) {
+        this._handleCollapsibleClickBound(e);
+      }
+    }
+
+    /**
      * Animate in collapsible slide
      * @param {Number} index - 0th index of slide
      */
@@ -133,23 +144,45 @@
       let $collapsibleLi = this.$el.children('li').eq(index);
       if ($collapsibleLi.length) {
         let $body = $collapsibleLi.children('.collapsible-body');
-        Vel($body[0], 'stop');
-        Vel(
-          $body[0],
-          'slideDown',
-          {duration: this.options.inDuration, easing: 'easeInOutCubic', queue: false,
-          complete: () => {
-            $body[0].style.height = '';
-            $body[0].style.overflow = '';
-            $body[0].style.padding = '';
-            $body[0].style.margin = '';
+
+        anim.remove($body[0]);
+        $body.css({
+          display: 'block',
+          overflow: 'hidden',
+          height: 0,
+          paddingTop: '',
+          paddingBottom: ''
+        });
+
+        let pTop = $body.css('padding-top');
+        let pBottom = $body.css('padding-bottom');
+        let finalHeight = $body[0].scrollHeight;
+        $body.css({
+          paddingTop: 0,
+          paddingBottom: 0
+        });
+
+        anim({
+          targets: $body[0],
+          height: finalHeight,
+          paddingTop: pTop,
+          paddingBottom: pBottom,
+          duration: this.options.inDuration,
+          easing: 'easeInOutCubic',
+          complete: (anim) => {
+            $body.css({
+              overflow: '',
+              paddingTop: '',
+              paddingBottom: '',
+              height: ''
+            });
 
             // onOpenEnd callback
-            if (typeof(this.options.onOpenEnd) === 'function') {
+            if (typeof this.options.onOpenEnd === 'function') {
               this.options.onOpenEnd.call(this, $collapsibleLi[0]);
             }
-          }}
-        );
+          }
+        });
       }
     }
 
@@ -161,23 +194,29 @@
       let $collapsibleLi = this.$el.children('li').eq(index);
       if ($collapsibleLi.length) {
         let $body = $collapsibleLi.children('.collapsible-body');
-        Vel($body[0], 'stop');
-        Vel(
-          $body[0],
-          'slideUp',
-          {duration: this.options.outDuration, easing: 'easeInOutCubic', queue: false,
+        anim.remove($body[0]);
+        $body.css('overflow', 'hidden');
+        anim({
+          targets: $body[0],
+          height: 0,
+          paddingTop: 0,
+          paddingBottom: 0,
+          duration: this.options.outDuration,
+          easing: 'easeInOutCubic',
           complete: () => {
-            $body[0].style.height = '';
-            $body[0].style.overflow ='';
-            $body[0].style.padding = '';
-            $body[0].style.margin = '';
+            $body.css({
+              height: '',
+              overflow: '',
+              padding: '',
+              display: ''
+            });
 
             // onCloseEnd callback
-            if (typeof(this.options.onCloseEnd) === 'function') {
+            if (typeof this.options.onCloseEnd === 'function') {
               this.options.onCloseEnd.call(this, $collapsibleLi[0]);
             }
-          }}
-        );
+          }
+        });
       }
     }
 
@@ -188,9 +227,8 @@
     open(index) {
       let $collapsibleLi = this.$el.children('li').eq(index);
       if ($collapsibleLi.length && !$collapsibleLi[0].classList.contains('active')) {
-
         // onOpenStart callback
-        if (typeof(this.options.onOpenStart) === 'function') {
+        if (typeof this.options.onOpenStart === 'function') {
           this.options.onOpenStart.call(this, $collapsibleLi[0]);
         }
 
@@ -217,9 +255,8 @@
     close(index) {
       let $collapsibleLi = this.$el.children('li').eq(index);
       if ($collapsibleLi.length && $collapsibleLi[0].classList.contains('active')) {
-
         // onCloseStart callback
-        if (typeof(this.options.onCloseStart) === 'function') {
+        if (typeof this.options.onCloseStart === 'function') {
           this.options.onCloseStart.call(this, $collapsibleLi[0]);
         }
 
@@ -235,5 +272,4 @@
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Collapsible, 'collapsible', 'M_Collapsible');
   }
-
-}( cash, M.Vel ));
+})(cash, M.anime);

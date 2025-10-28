@@ -1,16 +1,20 @@
-(function ($, Vel) {
+(function($, anim) {
   'use strict';
 
   let _defaults = {
     inDuration: 275,
     outDuration: 200,
+    onOpenStart: null,
+    onOpenEnd: null,
+    onCloseStart: null,
+    onCloseEnd: null
   };
 
   /**
    * @class
    *
    */
-  class Materialbox {
+  class Materialbox extends Component {
     /**
      * Construct Materialbox instance
      * @constructor
@@ -18,14 +22,8 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Materialbox, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Materialbox) {
-        el.M_Materialbox.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Materialbox = this;
 
       /**
@@ -33,6 +31,10 @@
        * @member Materialbox#options
        * @prop {Number} [inDuration=275] - Length in ms of enter transition
        * @prop {Number} [outDuration=200] - Length in ms of exit transition
+       * @prop {Function} onOpenStart - Callback function called before materialbox is opened
+       * @prop {Function} onOpenEnd - Callback function called after materialbox is opened
+       * @prop {Function} onCloseStart - Callback function called before materialbox is closed
+       * @prop {Function} onCloseEnd - Callback function called after materialbox is closed
        */
       this.options = $.extend({}, Materialbox.defaults, options);
 
@@ -42,7 +44,7 @@
       this.originalWidth = 0;
       this.originalHeight = 0;
       this.originInlineStyles = this.$el.attr('style');
-      this.caption = this.el.getAttribute('data-caption') || "";
+      this.caption = this.el.getAttribute('data-caption') || '';
 
       // Wrap
       this.$el.before(this.placeholder);
@@ -55,12 +57,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Materialbox(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -77,6 +75,13 @@
     destroy() {
       this._removeEventHandlers();
       this.el.M_Materialbox = undefined;
+
+      // Unwrap image
+      $(this.placeholder)
+        .after(this.el)
+        .remove();
+
+      this.$el.removeAttr('style');
     }
 
     /**
@@ -90,7 +95,7 @@
     /**
      * Remove Event Handlers
      */
-    removeEventHandlers() {
+    _removeEventHandlers() {
       this.el.removeEventListener('click', this._handleMaterialboxClickBound);
     }
 
@@ -100,8 +105,7 @@
      */
     _handleMaterialboxClick(e) {
       // If already modal, return to original
-      if (this.doneAnimating === false ||
-          (this.overlayActive && this.doneAnimating)) {
+      if (this.doneAnimating === false || (this.overlayActive && this.doneAnimating)) {
         this.close();
       } else {
         this.open();
@@ -132,9 +136,7 @@
      */
     _handleWindowEscape(e) {
       // ESC key
-      if (e.keyCode === 27 &&
-          this.doneAnimating &&
-          this.overlayActive) {
+      if (e.keyCode === 27 && this.doneAnimating && this.overlayActive) {
         this.close();
       }
     }
@@ -151,8 +153,7 @@
           curr.css('overflow', 'visible');
           if (this.ancestorsChanged === undefined) {
             this.ancestorsChanged = curr;
-          }
-          else {
+          } else {
             this.ancestorsChanged = this.ancestorsChanged.add(curr);
           }
         }
@@ -164,41 +165,57 @@
      * Animate image in
      */
     _animateImageIn() {
-      let velocityOptions = {
+      let animOptions = {
+        targets: this.el,
+        height: [this.originalHeight, this.newHeight],
+        width: [this.originalWidth, this.newWidth],
+        left:
+          M.getDocumentScrollLeft() +
+          this.windowWidth / 2 -
+          this.placeholder.offset().left -
+          this.newWidth / 2,
+        top:
+          M.getDocumentScrollTop() +
+          this.windowHeight / 2 -
+          this.placeholder.offset().top -
+          this.newHeight / 2,
         duration: this.options.inDuration,
-        queue: false,
-        ease: 'easeOutQuad',
+        easing: 'easeOutQuad',
         complete: () => {
           this.doneAnimating = true;
+
+          // onOpenEnd callback
+          if (typeof this.options.onOpenEnd === 'function') {
+            this.options.onOpenEnd.call(this, this.el);
+          }
         }
       };
 
-      let velocityProperties = {
-        height: this.newHeight,
-        width: this.newWidth,
-        left: M.getDocumentScrollLeft() + this.windowWidth/2 - this.placeholder.offset().left - this.newWidth/2,
-        top: M.getDocumentScrollTop() + this.windowHeight/2 - this.placeholder.offset().top - this.newHeight/2
-      };
-
-      if (this.$el.hasClass('responsive-img')) {
-        velocityProperties.maxWidth = [this.newWidth, this.newWidth];
-        velocityProperties.width = [velocityProperties.width, this.originalWidth];
-      } else {
-        velocityProperties.left = [velocityProperties.left, 0];
-        velocityProperties.top = [velocityProperties.top, 0];
+      // Override max-width or max-height if needed
+      this.maxWidth = this.$el.css('max-width');
+      this.maxHeight = this.$el.css('max-height');
+      if (this.maxWidth !== 'none') {
+        animOptions.maxWidth = this.newWidth;
+      }
+      if (this.maxHeight !== 'none') {
+        animOptions.maxHeight = this.newHeight;
       }
 
-      Vel(this.el, velocityProperties, velocityOptions);
+      anim(animOptions);
     }
 
     /**
      * Animate image out
      */
     _animateImageOut() {
-      let velocityOptions = {
+      let animOptions = {
+        targets: this.el,
+        width: this.originalWidth,
+        height: this.originalHeight,
+        left: 0,
+        top: 0,
         duration: this.options.outDuration,
-        queue: false,
-        ease: 'easeOutQuad',
+        easing: 'easeOutQuad',
         complete: () => {
           this.placeholder.css({
             height: '',
@@ -208,8 +225,16 @@
             left: ''
           });
 
+          // Revert to width or height attribute
+          if (this.attrWidth) {
+            this.$el.attr('width', this.attrWidth);
+          }
+          if (this.attrHeight) {
+            this.$el.attr('height', this.attrHeight);
+          }
+
           this.$el.removeAttr('style');
-          this.$el.attr('style', this.originInlineStyles);
+          this.originInlineStyles && this.$el.attr('style', this.originInlineStyles);
 
           // Remove class
           this.$el.removeClass('active');
@@ -219,19 +244,15 @@
           if (this.ancestorsChanged.length) {
             this.ancestorsChanged.css('overflow', '');
           }
+
+          // onCloseEnd callback
+          if (typeof this.options.onCloseEnd === 'function') {
+            this.options.onCloseEnd.call(this, this.el);
+          }
         }
       };
 
-      Vel(
-        this.el,
-        {
-          width: this.originalWidth,
-          height: this.originalHeight,
-          left: 0,
-          top: 0
-        },
-        velocityOptions
-      );
+      anim(animOptions);
     }
 
     /**
@@ -240,7 +261,7 @@
     _updateVars() {
       this.windowWidth = window.innerWidth;
       this.windowHeight = window.innerHeight;
-      this.caption = this.el.getAttribute('data-caption') || "";
+      this.caption = this.el.getAttribute('data-caption') || '';
     }
 
     /**
@@ -255,6 +276,11 @@
       this.doneAnimating = false;
       this.$el.addClass('active');
       this.overlayActive = true;
+
+      // onOpenStart callback
+      if (typeof this.options.onOpenStart === 'function') {
+        this.options.onOpenStart.call(this, this.el);
+      }
 
       // Set positioning for placeholder
       this.placeholder.css({
@@ -273,6 +299,18 @@
         'z-index': 1000,
         'will-change': 'left, top, width, height'
       });
+
+      // Change from width or height attribute to css
+      this.attrWidth = this.$el.attr('width');
+      this.attrHeight = this.$el.attr('height');
+      if (this.attrWidth) {
+        this.$el.css('width', this.attrWidth + 'px');
+        this.$el.removeAttr('width');
+      }
+      if (this.attrHeight) {
+        this.$el.css('width', this.attrHeight + 'px');
+        this.$el.removeAttr('height');
+      }
 
       // Add overlay
       this.$overlay = $('<div id="materialbox-overlay"></div>')
@@ -297,24 +335,33 @@
         top: -1 * overlayOffset.top + 'px'
       });
 
+      anim.remove(this.el);
+      anim.remove(this.$overlay[0]);
+
       // Animate Overlay
-      Vel(
-        this.$overlay[0],
-        {opacity: 1},
-        {duration: this.options.inDuration, queue: false, ease: 'easeOutQuad'}
-      );
+      anim({
+        targets: this.$overlay[0],
+        opacity: 1,
+        duration: this.options.inDuration,
+        easing: 'easeOutQuad'
+      });
 
       // Add and animate caption if it exists
-      if (this.caption !== "") {
+      if (this.caption !== '') {
+        if (this.$photocaption) {
+          anim.remove(this.$photoCaption[0]);
+        }
         this.$photoCaption = $('<div class="materialbox-caption"></div>');
         this.$photoCaption.text(this.caption);
         $('body').append(this.$photoCaption);
-        this.$photoCaption.css({ "display": "inline" });
-        Vel(
-          this.$photoCaption[0],
-          {opacity: 1},
-          {duration: this.options.inDuration, queue: false, ease: 'easeOutQuad'}
-        );
+        this.$photoCaption.css({ display: 'inline' });
+
+        anim({
+          targets: this.$photoCaption[0],
+          opacity: 1,
+          duration: this.options.inDuration,
+          easing: 'easeOutQuad'
+        });
       }
 
       // Resize Image
@@ -328,8 +375,7 @@
         ratio = this.originalHeight / this.originalWidth;
         this.newWidth = this.windowWidth * 0.9;
         this.newHeight = this.windowWidth * 0.9 * ratio;
-      }
-      else {
+      } else {
         ratio = this.originalWidth / this.originalHeight;
         this.newWidth = this.windowHeight * 0.9 * ratio;
         this.newHeight = this.windowHeight * 0.9;
@@ -354,10 +400,16 @@
       this._updateVars();
       this.doneAnimating = false;
 
-      Vel(this.el, 'stop');
-      Vel(this.$overlay[0], 'stop');
-      if (this.caption !== "") {
-        Vel(this.$photoCaption[0], 'stop');
+      // onCloseStart callback
+      if (typeof this.options.onCloseStart === 'function') {
+        this.options.onCloseStart.call(this, this.el);
+      }
+
+      anim.remove(this.el);
+      anim.remove(this.$overlay[0]);
+
+      if (this.caption !== '') {
+        anim.remove(this.$photoCaption[0]);
       }
 
       // disable exit handlers
@@ -365,26 +417,30 @@
       window.removeEventListener('resize', this._handleWindowResizeBound);
       window.removeEventListener('keyup', this._handleWindowEscapeBound);
 
-      Vel(
-        this.$overlay[0],
-        {opacity: 0},
-        {duration: this.options.outDuration, queue: false, ease: 'easeOutQuad', complete: () => {
+      anim({
+        targets: this.$overlay[0],
+        opacity: 0,
+        duration: this.options.outDuration,
+        easing: 'easeOutQuad',
+        complete: () => {
           this.overlayActive = false;
           this.$overlay.remove();
-        }}
-      );
+        }
+      });
 
       this._animateImageOut();
 
       // Remove Caption + reset css settings on image
-      if (this.caption !== "") {
-        Vel(
-          this.$photoCaption[0],
-          {opacity: 0},
-          {duration: this.options.outDuration, queue: false, ease: 'easeOutQuad', complete: () => {
+      if (this.caption !== '') {
+        anim({
+          targets: this.$photoCaption[0],
+          opacity: 0,
+          duration: this.options.outDuration,
+          easing: 'easeOutQuad',
+          complete: () => {
             this.$photoCaption.remove();
-          }}
-        );
+          }
+        });
       }
     }
   }
@@ -394,5 +450,4 @@
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Materialbox, 'materialbox', 'M_Materialbox');
   }
-
-}( cash, M.Vel ));
+})(cash, M.anime);

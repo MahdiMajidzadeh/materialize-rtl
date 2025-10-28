@@ -1,7 +1,9 @@
-(function($, Vel) {
+(function($) {
   'use strict';
 
   let _defaults = {
+    // Close when date is selected
+    autoClose: false,
 
     // the default output format for the input field value
     format: 'mmm dd, yyyy',
@@ -50,18 +52,47 @@
     // Specify a DOM element to render the calendar in
     container: null,
 
+    // Show clear button
+    showClearBtn: false,
+
     // internationalization
     i18n: {
+      cancel: 'Cancel',
       clear: 'Clear',
-      today: 'Today',
       done: 'Ok',
-      previousMonth : '‹',
-      nextMonth     : '›',
-      months        : ['January','February','March','April','May','June','July','August','September','October','November','December'],
-      monthsShort   : ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'],
-      weekdaysShort : ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'],
-      weekdays      : ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'],
-      weekdaysAbbrev : ['S','M','T','W','T','F','S']
+      previousMonth: '‹',
+      nextMonth: '›',
+      months: [
+        'January',
+        'February',
+        'March',
+        'April',
+        'May',
+        'June',
+        'July',
+        'August',
+        'September',
+        'October',
+        'November',
+        'December'
+      ],
+      monthsShort: [
+        'Jan',
+        'Feb',
+        'Mar',
+        'Apr',
+        'May',
+        'Jun',
+        'Jul',
+        'Aug',
+        'Sep',
+        'Oct',
+        'Nov',
+        'Dec'
+      ],
+      weekdays: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'],
+      weekdaysShort: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+      weekdaysAbbrev: ['S', 'M', 'T', 'W', 'T', 'F', 'S']
     },
 
     // events array
@@ -71,15 +102,14 @@
     onSelect: null,
     onOpen: null,
     onClose: null,
-    onDraw: null,
+    onDraw: null
   };
-
 
   /**
    * @class
    *
    */
-  class Datepicker {
+  class Datepicker extends Component {
     /**
      * Construct Datepicker instance and set up overlay
      * @constructor
@@ -87,17 +117,16 @@
      * @param {Object} options
      */
     constructor(el, options) {
+      super(Datepicker, el, options);
 
-      // If exists, destroy and reinitialize
-      if (!!el.M_Datepicker) {
-        el.M_Datepicker.destroy();
-      }
-
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Datepicker = this;
 
       this.options = $.extend({}, Datepicker.defaults, options);
+
+      // make sure i18n defaults are not lost when only few i18n option properties are passed
+      if (!!options && options.hasOwnProperty('i18n') && typeof options.i18n === 'object') {
+        this.options.i18n = $.extend({}, Datepicker.defaults.i18n, options.i18n);
+      }
 
       // Remove time component from minDate and maxDate options
       if (this.options.minDate) this.options.minDate.setHours(0, 0, 0, 0);
@@ -113,45 +142,37 @@
 
       if (!this.options.defaultDate) {
         this.options.defaultDate = new Date(Date.parse(this.el.value));
-        this.options.setDefaultDate = true;
       }
 
       let defDate = this.options.defaultDate;
-
       if (Datepicker._isDate(defDate)) {
         if (this.options.setDefaultDate) {
           this.setDate(defDate, true);
-        }
-        else {
+          this.setInputValue();
+        } else {
           this.gotoDate(defDate);
         }
       } else {
         this.gotoDate(new Date());
       }
 
-
       /**
        * Describes open/close state of datepicker
        * @type {Boolean}
        */
       this.isOpen = false;
-
     }
 
     static get defaults() {
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Datepicker(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     static _isDate(obj) {
-      return (/Date/).test(Object.prototype.toString.call(obj)) && !isNaN(obj.getTime());
+      return /Date/.test(Object.prototype.toString.call(obj)) && !isNaN(obj.getTime());
     }
 
     static _isWeekend(date) {
@@ -160,25 +181,27 @@
     }
 
     static _setToStartOfDay(date) {
-      if (Datepicker._isDate(date)) date.setHours(0,0,0,0);
+      if (Datepicker._isDate(date)) date.setHours(0, 0, 0, 0);
     }
 
     static _getDaysInMonth(year, month) {
-      return [31, Datepicker._isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][month];
+      return [31, Datepicker._isLeapYear(year) ? 29 : 28, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31][
+        month
+      ];
     }
 
     static _isLeapYear(year) {
       // solution by Matti Virkkunen: http://stackoverflow.com/a/4881951
-      return year % 4 === 0 && year % 100 !== 0 || year % 400 === 0;
+      return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
     }
 
-    static _compareDates(a,b) {
+    static _compareDates(a, b) {
       // weak date comparison (use setToStartOfDay(date) to ensure correct result)
       return a.getTime() === b.getTime();
     }
 
     static _setToStartOfDay(date) {
-      if (Datepicker._isDate(date)) date.setHours(0,0,0,0);
+      if (Datepicker._isDate(date)) date.setHours(0, 0, 0, 0);
     }
 
     /**
@@ -193,28 +216,44 @@
      * Teardown component
      */
     destroy() {
+      this._removeEventHandlers();
+      this.modal.destroy();
+      $(this.modalEl).remove();
+      this.destroySelects();
+      this.el.M_Datepicker = undefined;
+    }
 
+    destroySelects() {
+      let oldYearSelect = this.calendarEl.querySelector('.orig-select-year');
+      if (oldYearSelect) {
+        M.FormSelect.getInstance(oldYearSelect).destroy();
+      }
+      let oldMonthSelect = this.calendarEl.querySelector('.orig-select-month');
+      if (oldMonthSelect) {
+        M.FormSelect.getInstance(oldMonthSelect).destroy();
+      }
     }
 
     _insertHTMLIntoDOM() {
-      this.clearBtn.innerHTML = this.options.i18n.clear;
-      this.todayBtn.innerHTML = this.options.i18n.today;
+      if (this.options.showClearBtn) {
+        $(this.clearBtn).css({ visibility: '' });
+        this.clearBtn.innerHTML = this.options.i18n.clear;
+      }
+
       this.doneBtn.innerHTML = this.options.i18n.done;
+      this.cancelBtn.innerHTML = this.options.i18n.cancel;
 
-      let containerEl = document.querySelector(this.options.container);
-      if (this.options.container && !!containerEl) {
-        this.$modalEl.appendTo(containerEl);
-
+      if (this.options.container) {
+        this.$modalEl.appendTo(this.options.container);
       } else {
         this.$modalEl.insertBefore(this.el);
       }
     }
 
-
     _setupModal() {
       this.modalEl.id = 'modal-' + this.id;
-      this.modal = new M.Modal(this.modalEl, {
-        complete: () => {
+      this.modal = M.Modal.init(this.modalEl, {
+        onCloseEnd: () => {
           this.isOpen = false;
         }
       });
@@ -226,14 +265,16 @@
         return '';
       }
 
-      let formatArray = format.split( /(d{1,4}|m{1,4}|y{4}|yy|!.)/g );
-      let formattedDate = formatArray.map((label) => {
-        if (this.formats[label]) {
-          return this.formats[label]();
-        } else {
+      let formatArray = format.split(/(d{1,4}|m{1,4}|y{4}|yy|!.)/g);
+      let formattedDate = formatArray
+        .map((label) => {
+          if (this.formats[label]) {
+            return this.formats[label]();
+          }
+
           return label;
-        }
-      }).join( '' );
+        })
+        .join('');
       return formattedDate;
     }
 
@@ -251,7 +292,7 @@
       }
 
       let min = this.options.minDate,
-          max = this.options.maxDate;
+        max = this.options.maxDate;
 
       if (Datepicker._isDate(min) && date < min) {
         date = min;
@@ -273,7 +314,7 @@
 
     setInputValue() {
       this.el.value = this.toString();
-      this.$el.trigger('change', {firedBy: this});
+      this.$el.trigger('change', { firedBy: this });
     }
 
     _renderDateDisplay() {
@@ -298,22 +339,26 @@
 
       if (this.calendars) {
         let firstVisibleDate = new Date(this.calendars[0].year, this.calendars[0].month, 1),
-            lastVisibleDate = new Date(this.calendars[this.calendars.length-1].year, this.calendars[this.calendars.length-1].month, 1),
-            visibleDate = date.getTime();
+          lastVisibleDate = new Date(
+            this.calendars[this.calendars.length - 1].year,
+            this.calendars[this.calendars.length - 1].month,
+            1
+          ),
+          visibleDate = date.getTime();
         // get the end of the month
-        lastVisibleDate.setMonth(lastVisibleDate.getMonth()+1);
-        lastVisibleDate.setDate(lastVisibleDate.getDate()-1);
-        newCalendar = (visibleDate < firstVisibleDate.getTime() || lastVisibleDate.getTime() < visibleDate);
+        lastVisibleDate.setMonth(lastVisibleDate.getMonth() + 1);
+        lastVisibleDate.setDate(lastVisibleDate.getDate() - 1);
+        newCalendar =
+          visibleDate < firstVisibleDate.getTime() || lastVisibleDate.getTime() < visibleDate;
       }
 
       if (newCalendar) {
-        this.calendars = [{
-          month: date.getMonth(),
-          year: date.getFullYear()
-        }];
-        // if (this.options.mainCalendar === 'right') {
-        //   this.calendars[0].month += 1 - this.options.numberOfMonths;
-        // }
+        this.calendars = [
+          {
+            month: date.getMonth(),
+            year: date.getFullYear()
+          }
+        ];
       }
 
       this.adjustCalendars();
@@ -321,22 +366,16 @@
 
     adjustCalendars() {
       this.calendars[0] = this.adjustCalendar(this.calendars[0]);
-      // for (let c = 1; c < this.options.numberOfMonths; c++) {
-      //   this.calendars[c] = this.adjustCalendar({
-      //     month: this.calendars[0].month + c,
-      //     year: this.calendars[0].year
-      //   });
-      // }
       this.draw();
     }
 
     adjustCalendar(calendar) {
       if (calendar.month < 0) {
-        calendar.year -= Math.ceil(Math.abs(calendar.month)/12);
+        calendar.year -= Math.ceil(Math.abs(calendar.month) / 12);
         calendar.month += 12;
       }
       if (calendar.month > 11) {
-        calendar.year += Math.floor(Math.abs(calendar.month)/12);
+        calendar.year += Math.floor(Math.abs(calendar.month) / 12);
         calendar.month -= 12;
       }
       return calendar;
@@ -353,12 +392,12 @@
     }
 
     render(year, month, randId) {
-      let opts   = this.options,
-          now    = new Date(),
-          days   = Datepicker._getDaysInMonth(year, month),
-          before = new Date(year, month, 1).getDay(),
-          data   = [],
-          row    = [];
+      let opts = this.options,
+        now = new Date(),
+        days = Datepicker._getDaysInMonth(year, month),
+        before = new Date(year, month, 1).getDay(),
+        data = [],
+        row = [];
       Datepicker._setToStartOfDay(now);
       if (opts.firstDay > 0) {
         before -= opts.firstDay;
@@ -367,33 +406,37 @@
         }
       }
       let previousMonth = month === 0 ? 11 : month - 1,
-          nextMonth = month === 11 ? 0 : month + 1,
-          yearOfPreviousMonth = month === 0 ? year - 1 : year,
-          yearOfNextMonth = month === 11 ? year + 1 : year,
-          daysInPreviousMonth = Datepicker._getDaysInMonth(yearOfPreviousMonth, previousMonth);
+        nextMonth = month === 11 ? 0 : month + 1,
+        yearOfPreviousMonth = month === 0 ? year - 1 : year,
+        yearOfNextMonth = month === 11 ? year + 1 : year,
+        daysInPreviousMonth = Datepicker._getDaysInMonth(yearOfPreviousMonth, previousMonth);
       let cells = days + before,
-          after = cells;
-      while(after > 7) {
+        after = cells;
+      while (after > 7) {
         after -= 7;
       }
       cells += 7 - after;
       let isWeekSelected = false;
       for (let i = 0, r = 0; i < cells; i++) {
         let day = new Date(year, month, 1 + (i - before)),
-            isSelected = Datepicker._isDate(this.date) ? Datepicker._compareDates(day, this.date) : false,
-            isToday = Datepicker._compareDates(day, now),
-            hasEvent = opts.events.indexOf(day.toDateString()) !== -1 ? true : false,
-            isEmpty = i < before || i >= (days + before),
-            dayNumber = 1 + (i - before),
-            monthNumber = month,
-            yearNumber = year,
-            isStartRange = opts.startRange && Datepicker._compareDates(opts.startRange, day),
-            isEndRange = opts.endRange && Datepicker._compareDates(opts.endRange, day),
-            isInRange = opts.startRange && opts.endRange && opts.startRange < day && day < opts.endRange,
-            isDisabled = (opts.minDate && day < opts.minDate) ||
-                (opts.maxDate && day > opts.maxDate) ||
-                (opts.disableWeekends && Datepicker._isWeekend(day)) ||
-                (opts.disableDayFn && opts.disableDayFn(day));
+          isSelected = Datepicker._isDate(this.date)
+            ? Datepicker._compareDates(day, this.date)
+            : false,
+          isToday = Datepicker._compareDates(day, now),
+          hasEvent = opts.events.indexOf(day.toDateString()) !== -1 ? true : false,
+          isEmpty = i < before || i >= days + before,
+          dayNumber = 1 + (i - before),
+          monthNumber = month,
+          yearNumber = year,
+          isStartRange = opts.startRange && Datepicker._compareDates(opts.startRange, day),
+          isEndRange = opts.endRange && Datepicker._compareDates(opts.endRange, day),
+          isInRange =
+            opts.startRange && opts.endRange && opts.startRange < day && day < opts.endRange,
+          isDisabled =
+            (opts.minDate && day < opts.minDate) ||
+            (opts.maxDate && day > opts.maxDate) ||
+            (opts.disableWeekends && Datepicker._isWeekend(day)) ||
+            (opts.disableDayFn && opts.disableDayFn(day));
 
         if (isEmpty) {
           if (i < before) {
@@ -419,7 +462,7 @@
           isStartRange: isStartRange,
           isEndRange: isEndRange,
           isInRange: isInRange,
-          showDaysInNextAndPreviousMonths: opts.showDaysInNextAndPreviousMonths,
+          showDaysInNextAndPreviousMonths: opts.showDaysInNextAndPreviousMonths
         };
 
         row.push(this.renderDay(dayConfig));
@@ -441,7 +484,6 @@
         if (opts.showDaysInNextAndPreviousMonths) {
           arr.push('is-outside-current-month');
           arr.push('is-selection-disabled');
-
         } else {
           return '<td class="is-empty"></td>';
         }
@@ -469,30 +511,47 @@
       if (opts.isEndRange) {
         arr.push('is-endrange');
       }
-      return '<td data-day="' + opts.day + '" class="' + arr.join(' ') + '" aria-selected="' + ariaSelected + '">' +
-        '<button class="datepicker-day-button" type="button" ' +
-        'data-pika-year="' + opts.year + '" data-pika-month="' + opts.month + '" data-pika-day="' + opts.day + '">' +
-        opts.day +
-        '</button>' +
-        '</td>';
+      return (
+        `<td data-day="${opts.day}" class="${arr.join(' ')}" aria-selected="${ariaSelected}">` +
+        `<button class="datepicker-day-button" type="button" data-year="${opts.year}" data-month="${
+          opts.month
+        }" data-day="${opts.day}">${opts.day}</button>` +
+        '</td>'
+      );
     }
 
     renderRow(days, isRTL, isRowSelected) {
-      return '<tr class="pika-row' + (isRowSelected ? ' is-selected' : '') + '">' + (isRTL ? days.reverse() : days).join('') + '</tr>';
+      return (
+        '<tr class="datepicker-row' +
+        (isRowSelected ? ' is-selected' : '') +
+        '">' +
+        (isRTL ? days.reverse() : days).join('') +
+        '</tr>'
+      );
     }
 
     renderTable(opts, data, randId) {
-      return '<div class="datepicker-table-wrapper"><table cellpadding="0" cellspacing="0" class="datepicker-table" role="grid" aria-labelledby="' +
-        randId + '">' +
-        this.renderHead(opts) + this.renderBody(data) + '</table></div>';
+      return (
+        '<div class="datepicker-table-wrapper"><table cellpadding="0" cellspacing="0" class="datepicker-table" role="grid" aria-labelledby="' +
+        randId +
+        '">' +
+        this.renderHead(opts) +
+        this.renderBody(data) +
+        '</table></div>'
+      );
     }
 
     renderHead(opts) {
-      let i, arr = [];
+      let i,
+        arr = [];
       for (i = 0; i < 7; i++) {
-        arr.push('<th scope="col"><abbr title="' +
-                 this.renderDayName(opts, i) + '">' +
-                 this.renderDayName(opts, i, true) + '</abbr></th>');
+        arr.push(
+          `<th scope="col"><abbr title="${this.renderDayName(opts, i)}">${this.renderDayName(
+            opts,
+            i,
+            true
+          )}</abbr></th>`
+        );
       }
       return '<thead><tr>' + (opts.isRTL ? arr.reverse() : arr).join('') + '</tr></thead>';
     }
@@ -501,27 +560,41 @@
       return '<tbody>' + rows.join('') + '</tbody>';
     }
 
-
     renderTitle(instance, c, year, month, refYear, randId) {
-      let i, j, arr,
-          opts = this.options,
-          isMinYear = year === opts.minYear,
-          isMaxYear = year === opts.maxYear,
-          html = '<div id="' + randId + '" class="datepicker-controls" role="heading" aria-live="assertive">',
-          monthHtml,
-          yearHtml,
-          prev = true,
-          next = true;
+      let i,
+        j,
+        arr,
+        opts = this.options,
+        isMinYear = year === opts.minYear,
+        isMaxYear = year === opts.maxYear,
+        html =
+          '<div id="' +
+          randId +
+          '" class="datepicker-controls" role="heading" aria-live="assertive">',
+        monthHtml,
+        yearHtml,
+        prev = true,
+        next = true;
 
       for (arr = [], i = 0; i < 12; i++) {
-        arr.push('<option value="' + (year === refYear ? i - c : 12 + i - c) + '"' +
-                 (i === month ? ' selected="selected"': '') +
-                 ((isMinYear && i < opts.minMonth) || (isMaxYear && i > opts.maxMonth) ? 'disabled="disabled"' : '') + '>' +
-                 opts.i18n.months[i] + '</option>');
+        arr.push(
+          '<option value="' +
+            (year === refYear ? i - c : 12 + i - c) +
+            '"' +
+            (i === month ? ' selected="selected"' : '') +
+            ((isMinYear && i < opts.minMonth) || (isMaxYear && i > opts.maxMonth)
+              ? 'disabled="disabled"'
+              : '') +
+            '>' +
+            opts.i18n.months[i] +
+            '</option>'
+        );
       }
 
-      // monthHtml = '<div class="pika-label">' + opts.i18n.months[month] + '<select class="pika-select pika-select-month" tabindex="-1">' + arr.join('') + '</select></div>';
-      monthHtml = '<select class="pika-select pika-select-month" tabindex="-1">' + arr.join('') + '</select>';
+      monthHtml =
+        '<select class="datepicker-select orig-select-month" tabindex="-1">' +
+        arr.join('') +
+        '</select>';
 
       if ($.isArray(opts.yearRange)) {
         i = opts.yearRange[0];
@@ -533,15 +606,19 @@
 
       for (arr = []; i < j && i <= opts.maxYear; i++) {
         if (i >= opts.minYear) {
-          arr.push('<option value="' + i + '"' + (i === year ? ' selected="selected"': '') + '>' + (i) + '</option>');
+          arr.push(`<option value="${i}" ${i === year ? 'selected="selected"' : ''}>${i}</option>`);
         }
       }
-      // yearHtml = '<div class="pika-label">' + year + opts.yearSuffix + '<select class="pika-select pika-select-year" tabindex="-1">' + arr.join('') + '</select></div>';
-      yearHtml = '<select class="pika-select pika-select-year" tabindex="-1">' + arr.join('') + '</select>';
 
-      let leftArrow = '<svg fill="#000000" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 16.09l-4.58-4.59 4.58-4.59L14 5.5l-6 6 6 6z"/><path d="M0-.5h24v24H0z" fill="none"/></svg>';
-      html += '<button class="month-prev' + (prev ? '' : ' is-disabled') + '" type="button">' + leftArrow + '</button>';
+      yearHtml = `<select class="datepicker-select orig-select-year" tabindex="-1">${arr.join(
+        ''
+      )}</select>`;
 
+      let leftArrow =
+        '<svg fill="#000000" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M15.41 16.09l-4.58-4.59 4.58-4.59L14 5.5l-6 6 6 6z"/><path d="M0-.5h24v24H0z" fill="none"/></svg>';
+      html += `<button class="month-prev${
+        prev ? '' : ' is-disabled'
+      }" type="button">${leftArrow}</button>`;
 
       html += '<div class="selects-container">';
       if (opts.showMonthAfterYear) {
@@ -559,15 +636,14 @@
         next = false;
       }
 
+      let rightArrow =
+        '<svg fill="#000000" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M8.59 16.34l4.58-4.59-4.58-4.59L10 5.75l6 6-6 6z"/><path d="M0-.25h24v24H0z" fill="none"/></svg>';
+      html += `<button class="month-next${
+        next ? '' : ' is-disabled'
+      }" type="button">${rightArrow}</button>`;
 
-      // if (c === (this.options.numberOfMonths - 1) ) {
-      let rightArrow = '<svg fill="#000000" height="24" viewBox="0 0 24 24" width="24" xmlns="http://www.w3.org/2000/svg"><path d="M8.59 16.34l4.58-4.59-4.58-4.59L10 5.75l6 6-6 6z"/><path d="M0-.25h24v24H0z" fill="none"/></svg>';
-        html += '<button class="month-next' + (next ? '' : ' is-disabled') + '" type="button">' + rightArrow + '</button>';
-      // }
-
-      return html += '</div>';
+      return (html += '</div>');
     }
-
 
     /**
      * refresh the HTML
@@ -577,12 +653,12 @@
         return;
       }
       let opts = this.options,
-          minYear = opts.minYear,
-          maxYear = opts.maxYear,
-          minMonth = opts.minMonth,
-          maxMonth = opts.maxMonth,
-          html = '',
-          randId;
+        minYear = opts.minYear,
+        maxYear = opts.maxYear,
+        minMonth = opts.minMonth,
+        maxMonth = opts.maxMonth,
+        html = '',
+        randId;
 
       if (this._y <= minYear) {
         this._y = minYear;
@@ -597,27 +673,41 @@
         }
       }
 
-      randId = 'pika-title-' + Math.random().toString(36).replace(/[^a-z]+/g, '').substr(0, 2);
-
+      randId =
+        'datepicker-title-' +
+        Math.random()
+          .toString(36)
+          .replace(/[^a-z]+/g, '')
+          .substr(0, 2);
 
       for (let c = 0; c < 1; c++) {
         this._renderDateDisplay();
         html +=
-          this.renderTitle(this,
-                      c,
-                      this.calendars[c].year,
-                      this.calendars[c].month,
-                      this.calendars[0].year, randId) +
-          this.render(this.calendars[c].year, this.calendars[c].month, randId);
+          this.renderTitle(
+            this,
+            c,
+            this.calendars[c].year,
+            this.calendars[c].month,
+            this.calendars[0].year,
+            randId
+          ) + this.render(this.calendars[c].year, this.calendars[c].month, randId);
       }
+
+      this.destroySelects();
 
       this.calendarEl.innerHTML = html;
 
       // Init Materialize Select
-      let yearSelect = this.calendarEl.querySelector('.pika-select-year');
-      let monthSelect = this.calendarEl.querySelector('.pika-select-month');
-      new M.Select(yearSelect, {classes: 'select-year'});
-      new M.Select(monthSelect, {classes: 'select-month'});
+      let yearSelect = this.calendarEl.querySelector('.orig-select-year');
+      let monthSelect = this.calendarEl.querySelector('.orig-select-month');
+      M.FormSelect.init(yearSelect, {
+        classes: 'select-year',
+        dropdownOptions: { container: document.body, constrainWidth: false }
+      });
+      M.FormSelect.init(monthSelect, {
+        classes: 'select-month',
+        dropdownOptions: { container: document.body, constrainWidth: false }
+      });
 
       // Add change handlers for select
       yearSelect.addEventListener('change', this._handleYearChange.bind(this));
@@ -628,45 +718,52 @@
       }
     }
 
-
     /**
      * Setup Event Handlers
      */
     _setupEventHandlers() {
       this._handleInputKeydownBound = this._handleInputKeydown.bind(this);
       this._handleInputClickBound = this._handleInputClick.bind(this);
-      this._handleInputChangeBound= this._handleInputChange.bind(this);
+      this._handleInputChangeBound = this._handleInputChange.bind(this);
       this._handleCalendarClickBound = this._handleCalendarClick.bind(this);
       this._finishSelectionBound = this._finishSelection.bind(this);
-      this._handleTodayClickBound = this._handleTodayClick.bind(this);
-      this._handleClearClickBound = this._handleClearClick.bind(this);
       this._handleMonthChange = this._handleMonthChange.bind(this);
+      this._closeBound = this.close.bind(this);
 
       this.el.addEventListener('click', this._handleInputClickBound);
       this.el.addEventListener('keydown', this._handleInputKeydownBound);
       this.el.addEventListener('change', this._handleInputChangeBound);
       this.calendarEl.addEventListener('click', this._handleCalendarClickBound);
       this.doneBtn.addEventListener('click', this._finishSelectionBound);
-      this.todayBtn.addEventListener('click', this._handleTodayClickBound);
-      this.clearBtn.addEventListener('click', this._handleClearClickBound);
+      this.cancelBtn.addEventListener('click', this._closeBound);
+
+      if (this.options.showClearBtn) {
+        this._handleClearClickBound = this._handleClearClick.bind(this);
+        this.clearBtn.addEventListener('click', this._handleClearClickBound);
+      }
     }
 
     _setupVariables() {
       this.$modalEl = $(Datepicker._template);
       this.modalEl = this.$modalEl[0];
 
-		  this.calendarEl = this.modalEl.querySelector('.pika-single');
+      this.calendarEl = this.modalEl.querySelector('.datepicker-calendar');
 
       this.yearTextEl = this.modalEl.querySelector('.year-text');
       this.dateTextEl = this.modalEl.querySelector('.date-text');
-      this.clearBtn = this.modalEl.querySelector('.datepicker-clear');
-      this.todayBtn = this.modalEl.querySelector('.datepicker-today');
+      if (this.options.showClearBtn) {
+        this.clearBtn = this.modalEl.querySelector('.datepicker-clear');
+      }
       this.doneBtn = this.modalEl.querySelector('.datepicker-done');
+      this.cancelBtn = this.modalEl.querySelector('.datepicker-cancel');
 
       this.formats = {
-
-        dd: () => {
+        d: () => {
           return this.date.getDate();
+        },
+        dd: () => {
+          let d = this.date.getDate();
+          return (d < 10 ? '0' : '') + d;
         },
         ddd: () => {
           return this.options.i18n.weekdaysShort[this.date.getDay()];
@@ -674,17 +771,21 @@
         dddd: () => {
           return this.options.i18n.weekdays[this.date.getDay()];
         },
-        mm: () => {
+        m: () => {
           return this.date.getMonth() + 1;
+        },
+        mm: () => {
+          let m = this.date.getMonth() + 1;
+          return (m < 10 ? '0' : '') + m;
         },
         mmm: () => {
           return this.options.i18n.monthsShort[this.date.getMonth()];
         },
         mmmm: () => {
-          return this.options.i18n.monthsShort[this.date.getMonth()];
+          return this.options.i18n.months[this.date.getMonth()];
         },
         yy: () => {
-          return this.date.getFullYear().slice(2);
+          return ('' + this.date.getFullYear()).slice(2);
         },
         yyyy: () => {
           return this.date.getFullYear();
@@ -701,7 +802,6 @@
       this.el.removeEventListener('change', this._handleInputChangeBound);
       this.calendarEl.removeEventListener('click', this._handleCalendarClickBound);
     }
-
 
     _handleInputClick() {
       this.open();
@@ -721,37 +821,27 @@
 
       let $target = $(e.target);
       if (!$target.hasClass('is-disabled')) {
-        if ($target.hasClass('datepicker-day-button') &&
-            !$target.hasClass('is-empty') &&
-            !$target.parent().hasClass('is-disabled')) {
-          this.setDate(new Date(e.target.getAttribute('data-pika-year'),
-                                e.target.getAttribute('data-pika-month'),
-                                e.target.getAttribute('data-pika-day')));
-        }
-        else if ($target.closest('.month-prev').length) {
+        if (
+          $target.hasClass('datepicker-day-button') &&
+          !$target.hasClass('is-empty') &&
+          !$target.parent().hasClass('is-disabled')
+        ) {
+          this.setDate(
+            new Date(
+              e.target.getAttribute('data-year'),
+              e.target.getAttribute('data-month'),
+              e.target.getAttribute('data-day')
+            )
+          );
+          if (this.options.autoClose) {
+            this._finishSelection();
+          }
+        } else if ($target.closest('.month-prev').length) {
           this.prevMonth();
-        }
-        else if ($target.closest('.month-next').length) {
+        } else if ($target.closest('.month-next').length) {
           this.nextMonth();
         }
       }
-      // if (!$target.hasClass('pika-select')) {
-      //   // if this is touch event prevent mouse events emulation
-      //   // if (e.preventDefault) {
-      //   //   e.preventDefault();
-      //   // } else {
-      //   //   e.returnValue = false;
-      //   //   return false;
-      //   // }
-      // } else {
-      //   this._c = true;
-      // }
-    }
-
-    _handleTodayClick() {
-      this.date = new Date();
-      this.setInputValue();
-      this.close();
     }
 
     _handleClearClick() {
@@ -768,7 +858,6 @@
       this.gotoYear(e.target.value);
     }
 
-
     /**
      * change view to a specific month (zero-index, e.g. 0: January)
      */
@@ -779,7 +868,6 @@
       }
     }
 
-
     /**
      * change view to a specific full year (e.g. "2012")
      */
@@ -789,49 +877,6 @@
         this.adjustCalendars();
       }
     }
-
-    // _onChange(e) {
-    //   e = e || window.event;
-    //   let target = e.target || e.srcElement;
-    //   if (!target) {
-    //     return;
-    //   }
-    //   if (hasClass(target, 'pika-select-month')) {
-    //     self.gotoMonth(target.value);
-    //   }
-    //   else if (hasClass(target, 'pika-select-year')) {
-    //     self.gotoYear(target.value);
-    //   }
-    // }
-
-    // _onKeyChange(e) {
-    //   e = e || window.event;
-
-    //   if (self.isVisible()) {
-
-    //     switch(e.keyCode){
-    //     case 13:
-    //     case 27:
-    //       if (opts.field) {
-    //         opts.field.blur();
-    //       }
-    //       break;
-    //     case 37:
-    //       e.preventDefault();
-    //       self.adjustDate('subtract', 1);
-    //       break;
-    //     case 38:
-    //       self.adjustDate('subtract', 7);
-    //       break;
-    //     case 39:
-    //       self.adjustDate('add', 1);
-    //       break;
-    //     case 40:
-    //       self.adjustDate('add', 7);
-    //       break;
-    //     }
-    //   }
-    // }
 
     _handleInputChange(e) {
       let date;
@@ -849,29 +894,7 @@
       if (Datepicker._isDate(date)) {
         this.setDate(date);
       }
-      // if (!self._v) {
-      //   self.show();
-      // }
     }
-
-    // _onInputBlur() {
-    //   // IE allows pika div to gain focus; catch blur the input field
-    //   let pEl = document.activeElement;
-    //   do {
-    //     if (hasClass(pEl, 'pika-single')) {
-    //       return;
-    //     }
-    //   }
-    //   while ((pEl = pEl.parentNode));
-
-    //   if (!self._c) {
-    //     self._b = sto(function() {
-    //       self.hide();
-    //     }, 50);
-    //   }
-    //   self._c = false;
-    // }
-
 
     renderDayName(opts, day, abbr) {
       day += opts.firstDay;
@@ -881,7 +904,6 @@
       return abbr ? opts.i18n.weekdaysAbbrev[day] : opts.i18n.weekdays[day];
     }
 
-
     /**
      * Set input value to the selected date and close Datepicker
      */
@@ -889,7 +911,6 @@
       this.setInputValue();
       this.close();
     }
-
 
     /**
      * Open Datepicker
@@ -926,30 +947,29 @@
   }
 
   Datepicker._template = [
-		'<div class= "modal datepicker-modal">',
-		  '<div class="modal-content datepicker-container">',
-        '<div class="datepicker-date-display">',
-          '<span class="year-text"></span>',
-          '<span class="date-text"></span>',
-        '</div>',
-        '<div class="datepicker-calendar-container">',
-          '<div class="pika-single"></div>',
-          '<div class="datepicker-footer">',
-            '<button class="btn-flat datepicker-clear waves-effect" type="button"></button>',
-            '<div class="confirmation-btns">',
-              '<button class="btn-flat datepicker-today waves-effect" type="button"></button>',
-              '<button class="btn-flat datepicker-done waves-effect" type="button"></button>',
-            '</div>',
-          '</div>',
-        '</div>',
-      '</div>',
-		'</div>'
-	].join('');
+    '<div class= "modal datepicker-modal">',
+    '<div class="modal-content datepicker-container">',
+    '<div class="datepicker-date-display">',
+    '<span class="year-text"></span>',
+    '<span class="date-text"></span>',
+    '</div>',
+    '<div class="datepicker-calendar-container">',
+    '<div class="datepicker-calendar"></div>',
+    '<div class="datepicker-footer">',
+    '<button class="btn-flat datepicker-clear waves-effect" style="visibility: hidden;" type="button"></button>',
+    '<div class="confirmation-btns">',
+    '<button class="btn-flat datepicker-cancel waves-effect" type="button"></button>',
+    '<button class="btn-flat datepicker-done waves-effect" type="button"></button>',
+    '</div>',
+    '</div>',
+    '</div>',
+    '</div>',
+    '</div>'
+  ].join('');
 
   M.Datepicker = Datepicker;
 
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Datepicker, 'datepicker', 'M_Datepicker');
   }
-
-})(cash, M.Vel);
+})(cash);

@@ -1,4 +1,4 @@
-(function($, Vel) {
+(function($, anim) {
   'use strict';
 
   let _defaults = {
@@ -10,27 +10,22 @@
     onOpenEnd: null,
     onCloseStart: null,
     onCloseEnd: null,
+    preventScrolling: true
   };
-
 
   /**
    * @class
    */
-  class Sidenav {
+  class Sidenav extends Component {
     /**
      * Construct Sidenav instance and set up overlay
      * @constructor
      * @param {Element} el
      * @param {Object} options
      */
-    constructor (el, options) {
-      // If exists, destroy and reinitialize
-      if (!!el.M_Sidenav) {
-        el.M_Sidenav.destroy();
-      }
+    constructor(el, options) {
+      super(Sidenav, el, options);
 
-      this.el = el;
-      this.$el = $(el);
       this.el.M_Sidenav = this;
       this.id = this.$el.attr('id');
 
@@ -66,6 +61,10 @@
        */
       this.isDragged = false;
 
+      // Window size variables for window resize checks
+      this.lastWindowWidth = window.innerWidth;
+      this.lastWindowHeight = window.innerHeight;
+
       this._createOverlay();
       this._createDragTarget();
       this._setupEventHandlers();
@@ -79,12 +78,8 @@
       return _defaults;
     }
 
-    static init($els, options) {
-      let arr = [];
-      $els.each(function() {
-        arr.push(new Sidenav(this, options));
-      });
-      return arr;
+    static init(els, options) {
+      return super.init(this, els, options);
     }
 
     /**
@@ -100,9 +95,11 @@
      */
     destroy() {
       this._removeEventHandlers();
+      this._enableBodyScrolling();
       this._overlay.parentNode.removeChild(this._overlay);
       this.dragTarget.parentNode.removeChild(this.dragTarget);
       this.el.M_Sidenav = undefined;
+      this.el.style.transform = '';
 
       let index = Sidenav._sidenavs.indexOf(this);
       if (index >= 0) {
@@ -140,7 +137,6 @@
       this.el.addEventListener('touchend', this._handleCloseReleaseBound);
       this.el.addEventListener('click', this._handleCloseTriggerClickBound);
 
-
       // Add resize for side nav fixed
       if (this.isFixed) {
         this._handleWindowResizeBound = this._handleWindowResize.bind(this);
@@ -172,7 +168,7 @@
      * @param {Event} e
      */
     _handleTriggerClick(e) {
-      let $trigger =  $(e.target).closest('.sidenav-trigger');
+      let $trigger = $(e.target).closest('.sidenav-trigger');
       if (e.target && $trigger.length) {
         let sidenavId = M.getIdFromTrigger($trigger[0]);
 
@@ -184,10 +180,9 @@
       }
     }
 
-
     /**
      * Set variables needed at the beggining of drag
-     * and stop any current Velocity transition.
+     * and stop any current transition.
      * @param {Event} e
      */
     _startDrag(e) {
@@ -198,10 +193,11 @@
       this._time = Date.now();
       this._width = this.el.getBoundingClientRect().width;
       this._overlay.style.display = 'block';
-      Vel(this.el, 'stop');
-      Vel(this._overlay, 'stop');
+      this._initialScrollTop = this.isOpen ? this.el.scrollTop : M.getDocumentScrollTop();
+      this._verticallyScrolling = false;
+      anim.remove(this.el);
+      anim.remove(this._overlay);
     }
-
 
     /**
      * Set variables needed at each drag move update tick
@@ -209,18 +205,26 @@
      */
     _dragMoveUpdate(e) {
       let clientX = e.targetTouches[0].clientX;
+      let currentScrollTop = this.isOpen ? this.el.scrollTop : M.getDocumentScrollTop();
       this.deltaX = Math.abs(this._xPos - clientX);
       this._xPos = clientX;
       this.velocityX = this.deltaX / (Date.now() - this._time);
       this._time = Date.now();
+      if (this._initialScrollTop !== currentScrollTop) {
+        this._verticallyScrolling = true;
+      }
     }
-
 
     /**
      * Handles Dragging of Sidenav
      * @param {Event} e
      */
     _handleDragTargetDrag(e) {
+      // Check if draggable
+      if (!this.options.draggable || this._isCurrentlyFixed() || this._verticallyScrolling) {
+        return;
+      }
+
       // If not being dragged, set initial drag start variables
       if (!this.isDragged) {
         this._startDrag(e);
@@ -240,7 +244,6 @@
       if (this.options.edge === dragDirection) {
         totalDeltaX = 0;
       }
-
 
       /**
        * transformX is the drag displacement
@@ -267,13 +270,14 @@
      */
     _handleDragTargetRelease() {
       if (this.isDragged) {
-        if (this.percentOpen > .5) {
+        if (this.percentOpen > 0.2) {
           this.open();
         } else {
           this._animateOut();
         }
 
         this.isDragged = false;
+        this._verticallyScrolling = false;
       }
     }
 
@@ -283,6 +287,10 @@
      */
     _handleCloseDrag(e) {
       if (this.isOpen) {
+        // Check if draggable
+        if (!this.options.draggable || this._isCurrentlyFixed() || this._verticallyScrolling) {
+          return;
+        }
 
         // If not being dragged, set initial drag start variables
         if (!this.isDragged) {
@@ -323,23 +331,23 @@
      */
     _handleCloseRelease() {
       if (this.isOpen && this.isDragged) {
-        if (this.percentOpen > .5) {
+        if (this.percentOpen > 0.8) {
           this._animateIn();
         } else {
           this.close();
         }
 
         this.isDragged = false;
+        this._verticallyScrolling = false;
       }
     }
-
 
     /**
      * Handles closing of Sidenav when element with class .sidenav-close
      */
     _handleCloseTriggerClick(e) {
       let $closeTrigger = $(e.target).closest('.sidenav-close');
-      if ($closeTrigger.length) {
+      if ($closeTrigger.length && !this._isCurrentlyFixed()) {
         this.close();
       }
     }
@@ -348,12 +356,17 @@
      * Handle Window Resize
      */
     _handleWindowResize() {
-      if (window.innerWidth > 992) {
-        this.open();
+      // Only handle horizontal resizes
+      if (this.lastWindowWidth !== window.innerWidth) {
+        if (window.innerWidth > 992) {
+          this.open();
+        } else {
+          this.close();
+        }
       }
-      else {
-        this.close();
-      }
+
+      this.lastWindowWidth = window.innerWidth;
+      this.lastWindowHeight = window.innerHeight;
     }
 
     _setupClasses() {
@@ -369,9 +382,13 @@
     }
 
     _setupFixed() {
-      if (this.isFixed && window.innerWidth > 992) {
+      if (this._isCurrentlyFixed()) {
         this.open();
       }
+    }
+
+    _isCurrentlyFixed() {
+      return this.isFixed && window.innerWidth > 992;
     }
 
     _createDragTarget() {
@@ -399,20 +416,27 @@
       this.isOpen = true;
 
       // Run onOpenStart callback
-      if (typeof(this.options.onOpenStart) === 'function') {
+      if (typeof this.options.onOpenStart === 'function') {
         this.options.onOpenStart.call(this, this.el);
       }
 
       // Handle fixed Sidenav
-      if (this.isFixed && window.innerWidth > 992) {
-        Vel(this.el, 'stop');
-        Vel(this.el, {translateX: 0}, {duration: 0, queue: false});
+      if (this._isCurrentlyFixed()) {
+        anim.remove(this.el);
+        anim({
+          targets: this.el,
+          translateX: 0,
+          duration: 0,
+          easing: 'easeOutQuad'
+        });
         this._enableBodyScrolling();
         this._overlay.style.display = 'none';
 
-      // Handle non-fixed Sidenav
+        // Handle non-fixed Sidenav
       } else {
-        this._preventBodyScrolling();
+        if (this.options.preventScrolling) {
+          this._preventBodyScrolling();
+        }
 
         if (!this.isDragged || this.percentOpen != 1) {
           this._animateIn();
@@ -428,16 +452,16 @@
       this.isOpen = false;
 
       // Run onCloseStart callback
-      if (typeof(this.options.onCloseStart) === 'function') {
+      if (typeof this.options.onCloseStart === 'function') {
         this.options.onCloseStart.call(this, this.el);
       }
 
       // Handle fixed Sidenav
-      if (this.isFixed && window.innerWidth > 992) {
+      if (this._isCurrentlyFixed()) {
         let transformX = this.options.edge === 'left' ? '-105%' : '105%';
         this.el.style.transform = `translateX(${transformX})`;
 
-      // Handle non-fixed Sidenav
+        // Handle non-fixed Sidenav
       } else {
         this._enableBodyScrolling();
 
@@ -457,18 +481,25 @@
     _animateSidenavIn() {
       let slideOutPercent = this.options.edge === 'left' ? -1 : 1;
       if (this.isDragged) {
-        slideOutPercent = this.options.edge === 'left' ? slideOutPercent + this.percentOpen : slideOutPercent - this.percentOpen;
+        slideOutPercent =
+          this.options.edge === 'left'
+            ? slideOutPercent + this.percentOpen
+            : slideOutPercent - this.percentOpen;
       }
 
-      Vel(this.el, 'stop');
-      Vel(this.el,
-          {'translateX': [0, `${slideOutPercent * 100}%`]},
-          {duration: this.options.inDuration, queue: false, easing: 'easeOutQuad', complete: () => {
-            // Run onOpenEnd callback
-            if (typeof(this.options.onOpenEnd) === 'function') {
-              this.options.onOpenEnd.call(this, this.el);
-            }
-          }});
+      anim.remove(this.el);
+      anim({
+        targets: this.el,
+        translateX: [`${slideOutPercent * 100}%`, 0],
+        duration: this.options.inDuration,
+        easing: 'easeOutQuad',
+        complete: () => {
+          // Run onOpenEnd callback
+          if (typeof this.options.onOpenEnd === 'function') {
+            this.options.onOpenEnd.call(this, this.el);
+          }
+        }
+      });
     }
 
     _animateOverlayIn() {
@@ -476,13 +507,18 @@
       if (this.isDragged) {
         start = this.percentOpen;
       } else {
-        Vel.hook(this._overlay, 'display', 'block');
+        $(this._overlay).css({
+          display: 'block'
+        });
       }
 
-      Vel(this._overlay, 'stop');
-      Vel(this._overlay,
-          {opacity: [1, start]},
-          {duration: this.options.inDuration, queue: false, easing: 'easeOutQuad'});
+      anim.remove(this._overlay);
+      anim({
+        targets: this._overlay,
+        opacity: [start, 1],
+        duration: this.options.inDuration,
+        easing: 'easeOutQuad'
+      });
     }
 
     _animateOut() {
@@ -494,25 +530,38 @@
       let endPercent = this.options.edge === 'left' ? -1 : 1;
       let slideOutPercent = 0;
       if (this.isDragged) {
-        slideOutPercent = this.options.edge === 'left' ? endPercent + this.percentOpen : endPercent - this.percentOpen;
+        slideOutPercent =
+          this.options.edge === 'left'
+            ? endPercent + this.percentOpen
+            : endPercent - this.percentOpen;
       }
 
-      Vel(this.el, 'stop');
-      Vel(this.el,
-          {'translateX': [`${endPercent * 105}%`, `${slideOutPercent * 100}%`]},
-          {duration: this.options.outDuration, queue: false, easing: 'easeOutQuad', complete: () => {
-            // Run onOpenEnd callback
-            if (typeof(this.options.onCloseEnd) === 'function') {
-              this.options.onCloseEnd.call(this, this.el);
-            }
-          }});
+      anim.remove(this.el);
+      anim({
+        targets: this.el,
+        translateX: [`${slideOutPercent * 100}%`, `${endPercent * 105}%`],
+        duration: this.options.outDuration,
+        easing: 'easeOutQuad',
+        complete: () => {
+          // Run onOpenEnd callback
+          if (typeof this.options.onCloseEnd === 'function') {
+            this.options.onCloseEnd.call(this, this.el);
+          }
+        }
+      });
     }
 
     _animateOverlayOut() {
-      Vel(this._overlay, 'stop');
-      Vel(this._overlay,
-          'fadeOut',
-          {duration: this.options.outDuration, queue: false, easing: 'easeOutQuad'});
+      anim.remove(this._overlay);
+      anim({
+        targets: this._overlay,
+        opacity: 0,
+        duration: this.options.outDuration,
+        easing: 'easeOutQuad',
+        complete: () => {
+          $(this._overlay).css('display', 'none');
+        }
+      });
     }
   }
 
@@ -523,10 +572,9 @@
    */
   Sidenav._sidenavs = [];
 
-  window.M.Sidenav = Sidenav;
+  M.Sidenav = Sidenav;
 
   if (M.jQueryLoaded) {
     M.initializeJqueryWrapper(Sidenav, 'sidenav', 'M_Sidenav');
   }
-
-})(cash, M.Vel);
+})(cash, M.anime);
